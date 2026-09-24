@@ -168,7 +168,7 @@ A API lê o `.env` da raiz; não é preciso exportar variáveis.
 
 - Git Bash, a partir de `api/`: `./mvnw spring-boot:run`
 - PowerShell, a partir de `api/`: `.\mvnw.cmd spring-boot:run`
-- IDE: executar a classe `ApiApplication`
+- IDE: executar a classe `ApiApplication`. No VS Code, abra a pasta `api/` (e não a raiz do repositório); caso contrário o `.env` não é carregado e a API falha com `password authentication failed for user "${DB_USER}"`.
 
 ### Hot-reload
 
