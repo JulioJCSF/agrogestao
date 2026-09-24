@@ -1,8 +1,16 @@
+### Ambiente ###
+.env
+
+### Maven / Spring (api/) ###
 HELP.md
 target/
-.mvn/wrapper/maven-wrapper.jar
+api/.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### Node (web/, e2e/) ###
+node_modules/
+dist/
 
 ### STS ###
 .apt_generated
@@ -14,17 +22,16 @@ target/
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
 
 ### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+/api/nbproject/private/
+/api/nbbuild/
+/api/nbdist/
+/api/.nb-gradle/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
