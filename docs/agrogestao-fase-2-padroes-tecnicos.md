@@ -1,6 +1,6 @@
 # AgroGestão — Fase 2: Arquitetura e Padrões Técnicos
 
-Versão 1.4
+Versão 1.5
 
 Define as decisões técnicas e convenções do projeto. Documento de referência: consultado sempre que alguém abre um PR, cria uma migration ou nomeia um endpoint.
 
@@ -49,7 +49,6 @@ PostgreSQL (schema via Flyway)
 ```
 agrogestao/
 ├── api/                          # Spring Boot
-│   ├── Dockerfile.dev
 │   └── src/main/java/com/agrogestao/api/
 │       ├── controller/
 │       │   ├── plantio/
@@ -90,9 +89,7 @@ Serviços que cruzam domínios, como a apuração de resultado, ficam no subpaco
 
 ### Ambiente de desenvolvimento
 
-O time inteiro usa Windows. O repositório deve ser clonado **dentro do WSL2** (`~/...`), não no filesystem do Windows.
-
-Bind mount a partir de `C:\` ou `F:\` não propaga eventos de arquivo para o container — o hot-reload quebra — e é lento em I/O.
+Pré-requisitos de desenvolvimento em cada máquina: Docker Desktop, JDK 21 e Node 22. Só o PostgreSQL roda em container; a API e o front-end rodam direto no Windows. Ver ADR-0009.
 
 ---
 
@@ -132,10 +129,11 @@ Decisões já tomadas que precisam de registro:
 | 0002 | React com Vite e HeroUI no front-end | Stack dominada pela equipe |
 | 0003 | Spring Boot com Spring Data JPA no back-end | Stack dominada pela equipe |
 | 0004 | PostgreSQL com Flyway para versionamento de schema | Fase 0 |
-| 0005 | Docker Compose desde o início, com hot-reload | Consistência entre as máquinas da equipe |
+| 0005 | Docker Compose desde o início, com hot-reload — **substituída pela 0009** | Consistência entre as máquinas da equipe |
 | 0006 | Autenticação por conta institucional com perfis, sem conta de produtor | VAL01 — produtor não opera o sistema |
 | 0007 | Plantio como unidade de custo, separado de Cultura | Glossário, seção 2 |
 | 0008 | Organização por camada, com subpacote por domínio em controller e service | Equipe |
+| 0009 | Ambiente de desenvolvimento híbrido — substitui a 0005 | Equipe: time inteiro em Windows |
 
 A 0007 é a mais importante: é a que alguém vai questionar daqui a três meses.
 
@@ -348,9 +346,9 @@ Squash merge. Histórico da `main` com um commit por tarefa, legível e revertí
 | P06 | Redigir as ADRs 0001 a 0007 | Não |
 | P07 | Configurar Spotless, ESLint e Prettier no repositório | Não, mas quanto antes menos retrabalho de formatação |
 | P08 | Definir pipeline de CI (build e linter no PR) | Não — regra 4 do PR depende dela para ser automática |
-| P09 | Docker Compose, Dockerfiles de desenvolvimento e Flyway configurado | Sim — bloqueia o início do desenvolvimento |
+| P09 | Docker Compose do banco, Flyway e hot-reload local | Em andamento — banco e Flyway entregues no PR #11; falta DevTools e README do ambiente (ADR-0009) |
 | P16 | Inicializar o projeto React com Vite em `web/` | Sim — hoje há apenas um `index.html` |
 
-O projeto Spring já foi criado e commitado em `api/`, com pacote base `com.agrogestao.api`. O que falta é o ambiente subir: banco, hot-reload e migrations.
+O projeto Spring já foi criado e commitado em `api/`, com pacote base `com.agrogestao.api`. Banco e migrations já sobem pelo Docker Compose; o hot-reload é nativo, pelo DevTools no back-end e pelo HMR do Vite no front-end (ADR-0009).
 
 O modelo físico de dados não entra nesta fase. `DA01` e `DA07` foram decididas em VAL03 e o DER está desbloqueado: despesa alcança vários plantios com percentual gravado, e o valor de referência da diária é entidade própria com vigência por período.

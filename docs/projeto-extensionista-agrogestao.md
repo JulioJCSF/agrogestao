@@ -288,6 +288,9 @@ Arquitetura sugerida:
 * Containerização: Docker e Docker Compose, com front-end, back-end e banco de dados  
    totalmente conteinerizados desde o início do desenvolvimento, utilizando volumes montados  
    para permitir hot-reload durante o ambiente de desenvolvimento  
+
+> Nota de revisão (2026-09-24): o ambiente de desenvolvimento passou a ser híbrido — só o banco em container; front-end e back-end rodam direto na máquina do desenvolvedor. Ver ADR-0009.
+
 * Testes automatizados : JUnit (back-end) e Playwright (testes end-to-end no front-end)
 
 Arquitetura lógica: o usuário interage com o front-end desenvolvido em React (Vite), estilizado  
@@ -300,6 +303,8 @@ Arquitetura lógica: o usuário interage com o front-end desenvolvido em React (
  qualidade do sistema é verificada por meio de testes automatizados: testes unitários no  
  back-end com JUnit e testes end-to-end no front-end com Playwright, cobrindo os principais  
  fluxos de uso do sistema.
+
+> Nota de revisão (2026-09-24): o ambiente de desenvolvimento passou a ser híbrido — só o banco em container; front-end e back-end rodam direto na máquina do desenvolvedor. Ver ADR-0009.
 
 # **11\. Metodologia extensionista**
 
