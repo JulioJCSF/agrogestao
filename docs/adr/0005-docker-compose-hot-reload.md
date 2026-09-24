@@ -1,6 +1,6 @@
 # ADR-0005 — Docker Compose desde o início, com hot-reload
 
-**Status:** Aceita
+**Status:** Substituída por ADR-0009
 **Data:** 2026-09-24
 
 ## Contexto

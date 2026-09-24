@@ -1,6 +1,6 @@
 # AgroGestão — Fase 0: Documentos de Pré-Projeto
 
-Versão 2.2 — elaborada a partir das entrevistas iniciais com o Sindicato dos Trabalhadores Rurais de Redenção-CE.
+Versão 2.3 — elaborada a partir das entrevistas iniciais com o Sindicato dos Trabalhadores Rurais de Redenção-CE.
 
 **Histórico de versões**
 
@@ -19,6 +19,7 @@ Versão 2.2 — elaborada a partir das entrevistas iniciais com o Sindicato dos 
 | 2.0 | Resultado de VAL03. DA01 decidida (rateio proporcional à área). DA07 decidida pela equipe. Reinterpretação do formulário do sindicato: não existe documento a replicar — justificativas de DA03 e DA05 revistas, decisões mantidas. |
 | 2.1 | Revisão de consistência pós-VAL03: remoção das referências remanescentes ao formulário do sindicato como documento existente. |
 | 2.2 | Atualização de P04: convertida em RNF09 e na pendência P11 da Fase 1. Correção do texto de pendências: P02 consta como fechada, conforme a tabela. |
+| 2.3 | Stack: Docker Compose passa a orquestrar só o banco em desenvolvimento (ADR-0009). |
 
 ---
 
@@ -125,7 +126,7 @@ O diferencial está em três pontos:
 
 **De tecnologia**
 
-- Stack definida e já dominada pela equipe: React com Vite e HeroUI no front-end; Java com Spring Boot no back-end; PostgreSQL com Flyway; Docker Compose orquestrando todo o ambiente
+- Stack definida e já dominada pela equipe: React com Vite e HeroUI no front-end; Java com Spring Boot no back-end; PostgreSQL com Flyway; Docker Compose orquestrando o banco de dados em desenvolvimento (ADR-0009)
 - Sem orçamento para infraestrutura paga; hospedagem em produção a definir
 
 **De ambiente de uso**
