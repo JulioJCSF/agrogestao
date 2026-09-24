@@ -346,7 +346,7 @@ Squash merge. Histórico da `main` com um commit por tarefa, legível e revertí
 | P06 | Redigir as ADRs 0001 a 0007 | Não |
 | P07 | Configurar Spotless, ESLint e Prettier no repositório | Não, mas quanto antes menos retrabalho de formatação |
 | P08 | Definir pipeline de CI (build e linter no PR) | Não — regra 4 do PR depende dela para ser automática |
-| P09 | Docker Compose do banco, Flyway e hot-reload local | Em andamento — banco e Flyway entregues no PR #11; falta DevTools e README do ambiente (ADR-0009) |
+| P09 | Docker Compose do banco, Flyway e hot-reload local | **Fechada** — banco e Flyway no PR #11; DevTools e README neste PR (ADR-0009) |
 | P16 | Inicializar o projeto React com Vite em `web/` | Sim — hoje há apenas um `index.html` |
 
 O projeto Spring já foi criado e commitado em `api/`, com pacote base `com.agrogestao.api`. Banco e migrations já sobem pelo Docker Compose; o hot-reload é nativo, pelo DevTools no back-end e pelo HMR do Vite no front-end (ADR-0009).

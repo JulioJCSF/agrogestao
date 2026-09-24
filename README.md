@@ -131,3 +131,63 @@ As principais etapas previstas são:
 ## Status
 
 > Projeto em desenvolvimento.
+
+## Ambiente de desenvolvimento
+
+O ambiente é híbrido: só o PostgreSQL roda em container, pelo Docker Compose; a API roda direto no Windows. Ver `docs/adr/0009-ambiente-desenvolvimento-hibrido.md`.
+
+### Pré-requisitos
+
+- Docker Desktop
+- JDK 21 (Temurin)
+- Node 22 LTS
+
+Para conferir as versões instaladas:
+
+```bash
+docker --version
+docker compose version
+java -version
+node --version
+```
+
+### Primeiro uso
+
+Na raiz do repositório:
+
+```bash
+cp .env.example .env
+docker compose up -d db
+```
+
+No PowerShell, use `Copy-Item .env.example .env` no lugar do `cp`.
+
+### Rodar a API
+
+A API lê o `.env` da raiz; não é preciso exportar variáveis.
+
+- Git Bash, a partir de `api/`: `./mvnw spring-boot:run`
+- PowerShell, a partir de `api/`: `.\mvnw.cmd spring-boot:run`
+- IDE: executar a classe `ApiApplication`
+
+### Hot-reload
+
+O DevTools reinicia a API quando uma classe é recompilada — salvar o `.java` não basta, a IDE precisa compilar.
+
+- **VS Code** (Extension Pack for Java): compila ao salvar, sem configuração adicional.
+- **IntelliJ IDEA**: em *Settings → Build, Execution, Deployment → Compiler*, ativar **Build project automatically**; em *Settings → Advanced Settings*, ativar **Allow auto-make to start even if developed application is currently running**.
+
+### Swagger
+
+Com a API no ar: http://localhost:8080/swagger-ui.html
+
+### Conflito na porta 5432
+
+Se já houver um PostgreSQL instalado no Windows usando a porta 5432, mude `DB_PORT` no `.env` (por exemplo, `DB_PORT=5433`) e suba o banco de novo.
+
+### Parar o banco
+
+```bash
+docker compose down      # para o container; os dados são preservados
+docker compose down -v   # para e apaga o volume; o banco é zerado
+```
