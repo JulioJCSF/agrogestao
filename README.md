@@ -193,6 +193,17 @@ O DevTools reinicia a API quando uma classe é recompilada — salvar o `.java` 
 - **VS Code** (Extension Pack for Java): compila ao salvar, sem configuração adicional.
 - **IntelliJ IDEA**: em *Settings → Build, Execution, Deployment → Compiler*, ativar **Build project automatically**; em *Settings → Advanced Settings*, ativar **Allow auto-make to start even if developed application is currently running**.
 
+### Formatação do Java
+
+O código Java segue o Google Java Format, verificado pelo Spotless. O `verify` falha se houver arquivo fora do padrão.
+
+Antes de abrir PR, formate o código:
+
+- Git Bash, a partir de `api/`: `./mvnw spotless:apply`
+- PowerShell, a partir de `api/`: `.\mvnw.cmd spotless:apply`
+
+Para só conferir, sem alterar nada, use `spotless:check` no lugar de `spotless:apply`.
+
 ### Swagger
 
 Com a API no ar: http://localhost:8080/swagger-ui.html
