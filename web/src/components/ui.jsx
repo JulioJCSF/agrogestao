@@ -12,7 +12,7 @@ import {
   byId,
   dateText,
   number,
-  plantingLabel,
+  rotuloPlantio,
 } from '../contexts/DataContext.jsx'
 
 export function Action({
@@ -178,7 +178,7 @@ export function BackLink({ to, label }) {
   )
 }
 
-export function PlantingListRow({ row, data }) {
+export function LinhaPlantio({ row, data }) {
   const navigate = useNavigate()
   return (
     <button
@@ -191,7 +191,7 @@ export function PlantingListRow({ row, data }) {
         <Sprout size={18} />
       </span>
       <span>
-        <strong>{plantingLabel(data, row)}</strong>
+        <strong>{rotuloPlantio(data, row)}</strong>
         <small>
           {number(row.area, 3)} ha · Início {dateText(row.startedAt)}
         </small>
@@ -204,7 +204,7 @@ export function PlantingListRow({ row, data }) {
   )
 }
 
-export function OpenPlantingButton({ id }) {
+export function BotaoAbrirPlantio({ id }) {
   const navigate = useNavigate()
   return (
     <button
@@ -218,7 +218,7 @@ export function OpenPlantingButton({ id }) {
   )
 }
 
-export function ReportRow({ row, data }) {
+export function LinhaRelatorio({ row, data }) {
   const navigate = useNavigate()
   return (
     <button

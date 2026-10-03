@@ -35,16 +35,19 @@ try {
       throw new Error(`Falha ao renderizar ${path}: ${heading} ausente`)
     console.log(`OK ${path}`)
   }
-  const { readMock, saveRecord, removeRecord, closePlantingRecord } =
-    await vite.ssrLoadModule('/src/services/records.js')
+  const { readMock, salvarRegistro, removerRegistro, encerrarPlantioRegistro } =
+    await vite.ssrLoadModule('/src/services/registroService.js')
   assert.equal(readMock().dashboard.result, 5144)
   await assert.rejects(
-    saveRecord('producers', { name: 'Teste' }, true),
+    salvarRegistro('producers', { name: 'Teste' }, true),
     /prévia visual/,
   )
-  await assert.rejects(removeRecord('producers', 'p1', true), /prévia visual/)
   await assert.rejects(
-    closePlantingRecord('pl1', '2026-10-03', true),
+    removerRegistro('producers', 'p1', true),
+    /prévia visual/,
+  )
+  await assert.rejects(
+    encerrarPlantioRegistro('pl1', '2026-10-03', true),
     /prévia visual/,
   )
   assert.equal(readMock().producers.length, 4)

@@ -16,10 +16,10 @@ import {
   NotFound,
   PageHeading,
   Pagination,
-  ReportRow,
+  LinhaRelatorio,
 } from '../../components/ui.jsx'
 
-export function Reports() {
+export function Relatorios() {
   const { data } = useData()
   const { openModal } = useOutletContext()
   const { canWrite } = usePerfil()
@@ -67,7 +67,7 @@ export function Reports() {
         {rows.length ? (
           <div className="stack-list">
             {rows.slice((page - 1) * 10, page * 10).map((row) => (
-              <ReportRow key={row.id} row={row} data={data} />
+              <LinhaRelatorio key={row.id} row={row} data={data} />
             ))}
           </div>
         ) : (
@@ -89,7 +89,7 @@ export function Reports() {
   )
 }
 
-export function ReportDetail() {
+export function DetalheRelatorio() {
   const { id } = useParams()
   const { data } = useData()
   const report = byId(data.reports, id)

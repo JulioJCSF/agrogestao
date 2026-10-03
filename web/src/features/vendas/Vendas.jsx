@@ -5,10 +5,10 @@ import {
   dateText,
   money,
   number,
-  plantingLabel,
-  produced,
-  saleTotal,
-  sold,
+  rotuloPlantio,
+  quantidadeProduzida,
+  totalVenda,
+  quantidadeVendida,
   useData,
 } from '../../contexts/DataContext.jsx'
 import { usePerfil } from '../../contexts/AuthContext.jsx'
@@ -20,7 +20,7 @@ import {
   Tabs,
 } from '../../components/ui.jsx'
 
-export function Sales() {
+export function Vendas() {
   const { data } = useData()
   const { openModal } = useOutletContext()
   const { canWrite } = usePerfil()
@@ -110,7 +110,7 @@ export function Sales() {
                         <div className="allocation-detail">
                           {row.items.map((item, index) => (
                             <div key={index}>
-                              {plantingLabel(
+                              {rotuloPlantio(
                                 data,
                                 byId(data.plantings, item.plantingId),
                               )}
@@ -122,7 +122,7 @@ export function Sales() {
                       </details>
                     </td>
                     <td>
-                      <strong>{money(saleTotal(row))}</strong>
+                      <strong>{money(totalVenda(row))}</strong>
                     </td>
                   </tr>
                 ))}
@@ -157,11 +157,11 @@ export function Sales() {
                   return (
                     <tr key={row.id} data-testid={`stock-row-${row.id}`}>
                       <td>
-                        <strong>{plantingLabel(data, row)}</strong>
+                        <strong>{rotuloPlantio(data, row)}</strong>
                       </td>
                       <td>{byId(data.producers, row.producerId)?.name}</td>
-                      <td>{number(produced(data, row.id), 3)}</td>
-                      <td>{number(sold(data, row.id), 3)}</td>
+                      <td>{number(quantidadeProduzida(data, row.id), 3)}</td>
+                      <td>{number(quantidadeVendida(data, row.id), 3)}</td>
                       <td>
                         <strong className={balance < 0 ? 'negative' : ''}>
                           {balance == null ? '—' : number(balance, 3)}{' '}

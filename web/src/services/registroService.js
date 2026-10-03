@@ -85,7 +85,7 @@ function unavailableInPreview() {
   )
 }
 
-export async function listAll(demo = false, perfil = 'CONSULTA') {
+export async function listarTodos(demo = false, perfil = 'CONSULTA') {
   if (demo || mockEnabled) return readMock()
   const entries = await Promise.all(
     Object.entries(resources)
@@ -117,7 +117,7 @@ function emptyCollections() {
   return Object.fromEntries(Object.keys(resources).map((key) => [key, []]))
 }
 
-export async function saveRecord(collection, item, demo = false) {
+export async function salvarRegistro(collection, item, demo = false) {
   if (!resources[collection]) throw new Error('Tipo de registro desconhecido.')
   if (demo || mockEnabled) unavailableInPreview()
   const url = resources[collection]
@@ -127,13 +127,13 @@ export async function saveRecord(collection, item, demo = false) {
   return fromApi(data || item)
 }
 
-export async function removeRecord(collection, id, demo = false) {
+export async function removerRegistro(collection, id, demo = false) {
   if (!resources[collection]) throw new Error('Tipo de registro desconhecido.')
   if (demo || mockEnabled) unavailableInPreview()
   await api.delete(`${resources[collection]}/${id}`)
 }
 
-export async function closePlantingRecord(id, endedAt, demo = false) {
+export async function encerrarPlantioRegistro(id, endedAt, demo = false) {
   if (demo || mockEnabled) unavailableInPreview()
   await api.post(`/plantios/${id}/encerramento`, { dataEncerramento: endedAt })
 }

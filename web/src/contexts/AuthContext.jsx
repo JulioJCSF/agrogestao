@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { api } from '../services/api.js'
-import { mockEnabled } from '../services/records.js'
+import { mockEnabled } from '../services/registroService.js'
 
 const AuthContext = createContext(null)
 const KEY = 'agrogestao-session'
