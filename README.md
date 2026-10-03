@@ -99,6 +99,22 @@ O protótipo das telas do AgroGestão pode ser acessado no link abaixo:
 
 [Visualizar protótipo no v0](https://v0.app/jggnobregu7-9226s-projects/chat/prototipagem-do-agrogestao-fQVvjI5ARhQ)
 
+### Executar as telas localmente
+
+Com Node.js 22 e npm instalados:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Abra o endereço mostrado pelo Vite. Na tela de login, **Explorar prévia com dados fictícios** permite navegar pelas telas e examinar os formulários sem a API. A prévia é somente visual: não salva, altera nem exclui registros. A sessão de prévia fica no `sessionStorage`; os dados fictícios são arquivos estáticos em `web/src/services/mockData.js`.
+
+Para usar a prévia estática, copie `web/.env.example` para `web/.env.local` e inicie o Vite. Com `VITE_USAR_MOCK=true`, o botão **Explorar prévia** mostra inclusive a interface de administração, sem autenticar ninguém. Para solicitar dados reais, use `VITE_USAR_MOCK=false` e reinicie o Vite. O login e as operações reais dependem da API; as telas usam `web/src/services/records.js`, e o cliente Axios usa `/api/v1`, com proxy local para `http://localhost:8080`.
+
+O backend público ainda não implementa os contratos da issue F13. Os caminhos e nomes de campos do serviço são provisórios e devem ser conferidos com o Swagger antes de validar a integração real. Cálculos de resultado, saldo, rateio, relatório e regras de acesso pertencem à API; os números da prévia são exemplos estáticos. Para verificar o front-end, rode `npm run build`, `npm run lint` e `npm run smoke` dentro de `web/`.
+
 ## Documentação do projeto
 
 Os documentos, materiais de apoio, evidências de validação e demais arquivos relacionados ao projeto estão disponíveis no Google Drive:
