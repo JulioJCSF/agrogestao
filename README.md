@@ -89,7 +89,7 @@ Algumas regras foram definidas e refinadas durante as etapas de validação com 
 - despesas compartilhadas devem ser rateadas proporcionalmente à área utilizada por cada plantio;
 - o percentual utilizado no rateio deve ser preservado para manter a consistência histórica dos cálculos;
 - o registro de diárias integra o controle de custos da produção;
-- vendas devem atualizar o estoque;
+- não há estoque registrado: o saldo disponível de cada plantio é calculado (produção menos vendas) e é apenas informativo — não bloqueia a venda;
 - os cálculos e relatórios devem considerar o ciclo produtivo das culturas;
 - relatórios podem auxiliar na organização de informações sobre atividade rural, mas não representam garantia de aceitação por órgãos externos.
 
