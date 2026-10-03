@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.1
+Versão 1.2
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -71,7 +71,7 @@ Percentual e valor rateado são calculados uma vez, no lançamento, e gravados. 
 **Origem:** RF21, RN05
 
 ### RN11 — Exclusão de despesa
-Excluir uma despesa remove todos os seus rateios. Despesa já incluída em relatório emitido não pode ser excluída, apenas estornada por lançamento de ajuste.
+Excluir uma despesa remove todos os seus rateios. Despesa já incluída em relatório emitido não pode ser excluída, apenas estornada: a própria despesa é marcada como estornada (`despesa.estornada` no DER), sem lançamento de ajuste à parte. O relatório já emitido não muda (`RN34`).
 **Origem:** RF45, DA05
 
 ---

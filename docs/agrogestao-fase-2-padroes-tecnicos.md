@@ -1,6 +1,6 @@
 # AgroGestão — Fase 2: Arquitetura e Padrões Técnicos
 
-Versão 1.5
+Versão 1.6
 
 Define as decisões técnicas e convenções do projeto. Documento de referência: consultado sempre que alguém abre um PR, cria uma migration ou nomeia um endpoint.
 
@@ -176,9 +176,10 @@ refactor(api): extrai regra de apuração para ResultadoService
 docs: atualiza glossário com definição de plantio
 chore(infra): ajusta volume do Postgres no compose
 test(api): cobre apuração de plantio de ciclo curto
+test(e2e): cobre emissão do relatório com as ressalvas
 ```
 
-Escopos: `api`, `web`, `infra`, `docs`.
+Escopos: `api`, `web`, `e2e`, `infra`, `docs`. O `e2e` cobre a suíte Playwright em `e2e/` (QA 3.4), que não pertence a `api` nem a `web`.
 
 ---
 
@@ -200,7 +201,9 @@ POST   /api/v1/plantios/{id}/despesas
 GET    /api/v1/plantios/{id}/resultado
 ```
 
-Recurso aninhado só quando o filho não existe sem o pai. Despesa não existe sem plantio, então aninha. Produtor existe sozinho, então não.
+Recurso aninhado só quando o filho não existe sem o pai. Produtor existe sozinho, então não aninha.
+
+> **Pendente (P17):** o exemplo `POST /api/v1/plantios/{id}/despesas` não comporta despesa vinculada a vários plantios (RF19, RN06) nem a `despesa.produtor_id` do DER — a despesa pertence ao produtor e alcança um ou mais plantios pelo rateio. O contrato de despesa é definido na F13 (esqueleto da API) e registrado aqui; até lá, não implementar a partir deste exemplo.
 
 ### Códigos de status
 
@@ -296,28 +299,38 @@ Data do fato e data de coleta são colunas distintas em todo registro que descre
 
 ### Modelo
 
-**GitHub Flow** — `main` protegida, branch curta por tarefa, PR para integrar.
+Duas branches permanentes e branch curta por tarefa:
 
-Git-flow completo (develop, release, hotfix) é desproporcional para 15 semanas. Trunk-based com commit direto é arriscado com seis pessoas e sem CI madura.
+- **`master`** — entregas. Só recebe PR vindo da `develop`, a cada entrega.
+- **`develop`** — integração. Toda branch de tarefa sai da `develop` e volta para ela por PR.
+
+Git-flow completo (release, hotfix) é desproporcional para 15 semanas. Trunk-based com commit direto é arriscado com seis pessoas e sem CI madura. A `develop` dá à equipe um ponto de integração contínua sem expor a `master` a trabalho incompleto.
 
 ### Branches
+
+Formato `<tipo>/<descrição-curta>`, com o tipo do Conventional Commits:
 
 ```
 feat/registro-diaria
 fix/calculo-resultado-ciclo-curto
 refactor/extrai-servico-apuracao
+test/emissao-relatorio-ressalvas
 docs/glossario-dominio
+chore/infra-ambiente-local
 ```
 
 **Branch vive no máximo três dias.** Com seis pessoas no mesmo repositório, branch de duas semanas vira conflito irrecuperável. Tarefa grande se quebra em pedaços integráveis.
 
 ### Regras de Pull Request
 
-1. `main` protegida: sem push direto
-2. **Uma aprovação** para integrar. Duas travariam o fluxo com a disponibilidade parcial da equipe
-3. Quem abre o PR não aprova o próprio
-4. Build e linter verdes antes do merge
-5. PR grande demais para revisar em 15 minutos deve ser dividido
+1. `master` e `develop` protegidas: sem push direto em nenhuma das duas
+2. PR de tarefa aponta para a `develop`, com `Closes #<número>` na descrição
+3. **Uma aprovação** para integrar. Duas travariam o fluxo com a disponibilidade parcial da equipe
+4. Quem abre o PR não aprova o próprio
+5. Build e linter verdes antes do merge
+6. PR grande demais para revisar em 15 minutos deve ser dividido
+
+O modelo de descrição com o checklist abaixo está em `.github/pull_request_template.md`.
 
 ### Checklist do PR
 
@@ -335,7 +348,9 @@ O penúltimo item é o mais importante: o sistema guarda dados financeiros de te
 
 ### Estratégia de merge
 
-Squash merge. Histórico da `main` com um commit por tarefa, legível e revertível.
+**Squash merge** nos PRs de tarefa para a `develop`: um commit por tarefa, legível e revertível. O título do commit squash segue o Conventional Commits da seção 2.3.
+
+O PR de entrega, da `develop` para a `master`, usa merge commit, para que a `master` registre cada entrega como um ponto identificável.
 
 ---
 
@@ -345,9 +360,10 @@ Squash merge. Histórico da `main` com um commit por tarefa, legível e revertí
 |---|---|---|
 | P06 | Redigir as ADRs 0001 a 0007 | Não |
 | P07 | Configurar Spotless, ESLint e Prettier no repositório | Não, mas quanto antes menos retrabalho de formatação |
-| P08 | Definir pipeline de CI (build e linter no PR) | Não — regra 4 do PR depende dela para ser automática |
+| P08 | Definir pipeline de CI (build e linter no PR) | Não — regra 5 do PR depende dela para ser automática |
 | P09 | Docker Compose do banco, Flyway e hot-reload local | **Fechada** — banco e Flyway no PR #11; DevTools e README neste PR (ADR-0009) |
 | P16 | Inicializar o projeto React com Vite em `web/` | Sim — hoje há apenas um `index.html` |
+| P17 | Contrato de despesa em vários plantios: substituir o exemplo `POST /plantios/{id}/despesas` da 2.4 (RF19, `despesa.produtor_id`) | Sim, a API de despesa — resolvida na F13 |
 
 O projeto Spring já foi criado e commitado em `api/`, com pacote base `com.agrogestao.api`. Banco e migrations já sobem pelo Docker Compose; o hot-reload é nativo, pelo DevTools no back-end e pelo HMR do Vite no front-end (ADR-0009).
 

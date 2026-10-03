@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Glossário de Domínio
 
-Versão 1.4
+Versão 1.5
 
 Define os termos de negócio do projeto sem ambiguidade. É o documento de referência para requisitos, regras de negócio, modelagem de dados, nomenclatura de código e casos de teste.
 
@@ -115,11 +115,13 @@ Entrada de dinheiro. No MVP decorre de venda; o termo é mantido separado porque
 
 ### Venda
 
-Transação de saída de produto: produto, quantidade, valor, data e cliente. Gera receita e baixa de estoque.
+Transação de saída de produto: produto, quantidade, valor, data e cliente. Gera receita. Não movimenta estoque — não há estoque registrado (`M03`); a quantidade vendida apenas reduz o saldo calculado do plantio.
 
 ### Estoque
 
-Quantidade de produto disponível, após colheita e antes da venda. Entra por produção, sai por venda.
+Saldo calculado, não registrado: a produção registrada de um plantio menos as quantidades vendidas que apontam para ele (`ITEM_VENDA`). Não existe entidade de estoque no modelo (`M03`).
+
+O saldo é informativo: não bloqueia venda, apenas sinaliza divergência (`RN29`).
 
 ---
 

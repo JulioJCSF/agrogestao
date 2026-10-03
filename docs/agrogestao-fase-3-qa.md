@@ -1,6 +1,6 @@
 # AgroGestão — Fase 3: Planejamento de QA
 
-Versão 1.0
+Versão 1.1
 
 Transforma regra de negócio em cobertura de teste antes do código chegar.
 
@@ -109,6 +109,8 @@ Prioridade: **P1** falha em silêncio ou afeta o documento entregue ao produtor 
 | RN37 consentimento para emissão | RF50 | CT058, CT059 | API | P2 |
 
 Quinze regras em P1. É a suíte que roda a cada PR.
+
+**P1 de tipo E2E (CT051, CT052).** A 3.4 reserva o E2E de interface para antes da entrega, mas as ressalvas do relatório precisam falhar o build se sumirem. Solução adotada (Q07): as duas ressalvas são verificadas também em nível de API/integração — o conteúdo gravado da emissão contém os dois textos — e esses testes rodam a cada PR. O E2E de interface de CT051 e CT052 continua rodando antes da entrega.
 
 ### Casos críticos detalhados
 
