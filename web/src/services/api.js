@@ -27,6 +27,7 @@ api.interceptors.response.use(
       'Não foi possível concluir a operação.'
     const normalized = new Error(message)
     normalized.status = error.response?.status
+    normalized.erro = error.response?.data?.erro
     normalized.campos = error.response?.data?.campos || []
     return Promise.reject(normalized)
   },
