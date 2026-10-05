@@ -14,3 +14,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  web:
+    # Mensagens do Bean Validation sempre em português, independente do navegador (RNF03).
+    locale: pt_BR
+    locale-resolver: fixed
