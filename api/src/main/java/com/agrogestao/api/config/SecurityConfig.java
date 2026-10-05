@@ -1,18 +1,22 @@
 package com.agrogestao.api.config;
 
+import com.agrogestao.api.exception.JsonAcessoNegadoHandler;
+import com.agrogestao.api.exception.JsonPontoDeEntradaDeAutenticacao;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 @Configuration
 public class SecurityConfig {
 
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain securityFilterChain(
+      HttpSecurity http,
+      JsonPontoDeEntradaDeAutenticacao authenticationEntryPoint,
+      JsonAcessoNegadoHandler accessDeniedHandler)
+      throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(
             auth ->
@@ -21,7 +25,9 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated())
         .exceptionHandling(
-            ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+            ex ->
+                ex.authenticationEntryPoint(authenticationEntryPoint)
+                    .accessDeniedHandler(accessDeniedHandler))
         .build();
   }
 }
