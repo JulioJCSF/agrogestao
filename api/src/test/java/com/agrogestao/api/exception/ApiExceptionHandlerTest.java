@@ -21,7 +21,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 @WebMvcTest(controllers = ErroTesteController.class)
-@Import({SecurityConfig.class, JsonPontoDeEntradaDeAutenticacao.class, JsonAcessoNegadoHandler.class})
+@Import({
+  SecurityConfig.class, 
+  JsonPontoDeEntradaDeAutenticacao.class, 
+  JsonAcessoNegadoHandler.class
+})
 class ApiExceptionHandlerTest {
 
   @Autowired private MockMvc mockMvc;
