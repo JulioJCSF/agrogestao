@@ -1,13 +1,13 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from './AuthContext.jsx'
 import {
-  listAll,
+  listarTodos,
   mockEnabled,
   readMock,
-  removeRecord,
-  saveRecord,
-  closePlantingRecord,
-} from '../services/records.js'
+  removerRegistro,
+  salvarRegistro,
+  encerrarPlantioRegistro,
+} from '../services/registroService.js'
 
 const DataContext = createContext(null)
 const emptyData = {
@@ -41,7 +41,7 @@ export function DataProvider({ children }) {
     if (!session) return
     let active = true
     setLoading(true)
-    listAll(session.demo, session.user?.perfil)
+    listarTodos(session.demo, session.user?.perfil)
       .then((result) => {
         if (active) {
           setData(result)
@@ -60,24 +60,24 @@ export function DataProvider({ children }) {
   }, [session])
 
   async function save(collection, item) {
-    const value = await saveRecord(collection, item, session?.demo)
-    setData(await listAll(session?.demo, session?.user?.perfil))
+    const value = await salvarRegistro(collection, item, session?.demo)
+    setData(await listarTodos(session?.demo, session?.user?.perfil))
     return value
   }
 
   async function remove(collection, id) {
-    await removeRecord(collection, id, session?.demo)
-    setData(await listAll(session?.demo, session?.user?.perfil))
+    await removerRegistro(collection, id, session?.demo)
+    setData(await listarTodos(session?.demo, session?.user?.perfil))
   }
 
-  async function closePlanting(id, endedAt) {
-    await closePlantingRecord(id, endedAt, session?.demo)
-    setData(await listAll(session?.demo, session?.user?.perfil))
+  async function encerrarPlantio(id, endedAt) {
+    await encerrarPlantioRegistro(id, endedAt, session?.demo)
+    setData(await listarTodos(session?.demo, session?.user?.perfil))
   }
 
   return (
     <DataContext.Provider
-      value={{ data, save, remove, closePlanting, loading, error }}
+      value={{ data, save, remove, encerrarPlantio, loading, error }}
     >
       {children}
     </DataContext.Provider>
@@ -99,16 +99,16 @@ export const number = (value, digits = 0) =>
   )
 export const dateText = (value) =>
   value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : '—'
-export const saleTotal = (sale) => sale.total ?? 0
-export const plantingLabel = (data, planting) =>
+export const totalVenda = (sale) => sale.total ?? 0
+export const rotuloPlantio = (data, planting) =>
   planting
     ? `${byId(data.cultures, planting.cultureId)?.name || 'Cultura'} · ${byId(data.properties, planting.propertyId)?.name || 'Propriedade'}`
     : 'Plantio não encontrado'
-export const produced = (data, plantingId) =>
+export const quantidadeProduzida = (data, plantingId) =>
   data.stock.find((row) => row.plantingId === plantingId)?.produced ?? 0
-export const sold = (data, plantingId) =>
+export const quantidadeVendida = (data, plantingId) =>
   data.stock.find((row) => row.plantingId === plantingId)?.sold ?? 0
-export const plantingResult = (data, plantingId) =>
+export const resultadoPlantio = (data, plantingId) =>
   data.results.find((row) => row.plantingId === plantingId) || {
     produced: 0,
     sold: 0,

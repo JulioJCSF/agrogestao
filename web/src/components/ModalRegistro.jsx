@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
-import { byId, plantingLabel, useData } from '../contexts/DataContext.jsx'
+import { byId, rotuloPlantio, useData } from '../contexts/DataContext.jsx'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -214,8 +214,8 @@ function initialValues(type, item, defaults, data) {
   return { ...base[type], ...defaults }
 }
 
-export function RecordModal({ modal, onClose, notify, openModal }) {
-  const { data, save, closePlanting } = useData()
+export function ModalRegistro({ modal, onClose, notify, openModal }) {
+  const { data, save, encerrarPlantio } = useData()
   const navigate = useNavigate()
   const { type, item, defaults = {} } = modal
   const [form, setForm] = useState(() =>
@@ -238,7 +238,7 @@ export function RecordModal({ modal, onClose, notify, openModal }) {
         ? true
         : row.producerId === form.producerId,
     )
-    .map((row) => ({ value: row.id, label: plantingLabel(data, row) }))
+    .map((row) => ({ value: row.id, label: rotuloPlantio(data, row) }))
   const title =
     item && type !== 'closePlanting'
       ? `Editar ${titles[type][0].toLowerCase().replace(/^(cadastrar|registrar|lançar|novo|nova) /, '')}`
@@ -262,7 +262,7 @@ export function RecordModal({ modal, onClose, notify, openModal }) {
         return
       }
       if (type === 'closePlanting') {
-        await closePlanting(item.id, form.endedAt)
+        await encerrarPlantio(item.id, form.endedAt)
         onClose()
         notify('Plantio encerrado com sucesso.')
         return

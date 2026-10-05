@@ -6,10 +6,10 @@ import {
   dateText,
   money,
   number,
-  plantingLabel,
-  plantingResult,
-  produced,
-  sold,
+  rotuloPlantio,
+  resultadoPlantio,
+  quantidadeProduzida,
+  quantidadeVendida,
   useData,
 } from '../../contexts/DataContext.jsx'
 import { usePerfil } from '../../contexts/AuthContext.jsx'
@@ -18,7 +18,7 @@ import {
   BackLink,
   Empty,
   NotFound,
-  OpenPlantingButton,
+  BotaoAbrirPlantio,
   PageHeading,
   Pagination,
   SectionHeader,
@@ -26,7 +26,7 @@ import {
   Tabs,
 } from '../../components/ui.jsx'
 
-export function ProductionPage() {
+export function Producao() {
   const { data } = useData()
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') || 'plantios'
@@ -45,7 +45,7 @@ export function ProductionPage() {
       (!producerId || row.producerId === producerId) &&
       (!from || row.startedAt >= from) &&
       (!to || row.startedAt <= to) &&
-      `${plantingLabel(data, row)} ${byId(data.producers, row.producerId)?.name}`
+      `${rotuloPlantio(data, row)} ${byId(data.producers, row.producerId)?.name}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   )
@@ -189,7 +189,7 @@ export function ProductionPage() {
                         </Status>
                       </td>
                       <td>
-                        <OpenPlantingButton id={row.id} />
+                        <BotaoAbrirPlantio id={row.id} />
                       </td>
                     </tr>
                   ))}
@@ -226,7 +226,7 @@ export function ProductionPage() {
                   const plant = byId(data.plantings, row.plantingId)
                   return (
                     <tr key={row.id} data-testid={`production-row-${row.id}`}>
-                      <td>{plantingLabel(data, plant)}</td>
+                      <td>{rotuloPlantio(data, plant)}</td>
                       <td>{byId(data.producers, plant?.producerId)?.name}</td>
                       <td>{dateText(row.date)}</td>
                       <td>
@@ -246,14 +246,14 @@ export function ProductionPage() {
   )
 }
 
-export function PlantingDetail() {
+export function DetalhePlantio() {
   const { id } = useParams()
   const { data } = useData()
   const { openModal } = useOutletContext()
   const { canWrite } = usePerfil()
   const plant = byId(data.plantings, id)
   if (!plant) return <NotFound />
-  const result = plantingResult(data, id)
+  const result = resultadoPlantio(data, id)
   const productions = data.production.filter((row) => row.plantingId === id)
   const expenses = data.expenses.filter((row) =>
     row.allocations?.some((entry) => entry.plantingId === id),
@@ -300,14 +300,14 @@ export function PlantingDetail() {
         <div>
           <span>Quantidade produzida</span>
           <strong>
-            {number(produced(data, id), 3)}{' '}
+            {number(quantidadeProduzida(data, id), 3)}{' '}
             {byId(data.cultures, plant.cultureId)?.unit}
           </strong>
         </div>
         <div>
           <span>Quantidade vendida</span>
           <strong>
-            {number(sold(data, id), 3)}{' '}
+            {number(quantidadeVendida(data, id), 3)}{' '}
             {byId(data.cultures, plant.cultureId)?.unit}
           </strong>
         </div>

@@ -9,14 +9,14 @@ import {
   Empty,
   PageHeading,
   Pagination,
-  PlantingListRow,
-  ReportRow,
+  LinhaPlantio,
+  LinhaRelatorio,
   SectionHeader,
   Status,
   NotFound,
 } from '../../components/ui.jsx'
 
-export function Producers() {
+export function Produtores() {
   const { data, save, remove } = useData()
   const navigate = useNavigate()
   const { openModal, notify, confirm } = useOutletContext()
@@ -189,7 +189,7 @@ export function Producers() {
   )
 }
 
-export function ProducerDetail() {
+export function DetalheProdutor() {
   const { id } = useParams()
   const { data } = useData()
   const { openModal } = useOutletContext()
@@ -311,7 +311,7 @@ export function ProducerDetail() {
           {plantings.length ? (
             <div className="stack-list">
               {plantings.map((row) => (
-                <PlantingListRow key={row.id} row={row} data={data} />
+                <LinhaPlantio key={row.id} row={row} data={data} />
               ))}
             </div>
           ) : (
@@ -340,7 +340,7 @@ export function ProducerDetail() {
         {reports.length ? (
           <div className="stack-list">
             {reports.map((row) => (
-              <ReportRow key={row.id} row={row} data={data} />
+              <LinhaRelatorio key={row.id} row={row} data={data} />
             ))}
           </div>
         ) : (

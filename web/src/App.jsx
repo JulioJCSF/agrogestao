@@ -27,21 +27,24 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { RecordModal } from './components/RecordModal.jsx'
+import { ModalRegistro } from './components/ModalRegistro.jsx'
 import { Empty, NotFound } from './components/ui.jsx'
 import { useData } from './contexts/DataContext.jsx'
 import { useAuth } from './contexts/AuthContext.jsx'
 import { Dashboard } from './features/dashboard/Dashboard.jsx'
-import { Producers, ProducerDetail } from './features/produtores/Producers.jsx'
 import {
-  ProductionPage,
-  PlantingDetail,
-} from './features/producao/Production.jsx'
-import { Finance } from './features/financeiro/Finance.jsx'
-import { Sales } from './features/vendas/Sales.jsx'
-import { Reports, ReportDetail } from './features/relatorios/Reports.jsx'
-import { Config } from './features/configuracoes/Config.jsx'
-import { mockEnabled } from './services/records.js'
+  Produtores,
+  DetalheProdutor,
+} from './features/produtores/Produtores.jsx'
+import { Producao, DetalhePlantio } from './features/producao/Producao.jsx'
+import { Financeiro } from './features/financeiro/Financeiro.jsx'
+import { Vendas } from './features/vendas/Vendas.jsx'
+import {
+  Relatorios,
+  DetalheRelatorio,
+} from './features/relatorios/Relatorios.jsx'
+import { Configuracoes } from './features/configuracoes/Configuracoes.jsx'
+import { mockEnabled } from './services/registroService.js'
 
 const navItems = [
   { to: '/', label: 'Visão geral', icon: Home },
@@ -300,7 +303,7 @@ function AppLayout() {
         </main>
       </div>
       {modal && (
-        <RecordModal
+        <ModalRegistro
           key={`${modal.type}-${modal.item?.id || 'new'}`}
           modal={modal}
           onClose={() => setModal(null)}
@@ -605,15 +608,15 @@ export function App() {
         element={session ? <AppLayout /> : <Navigate to="/login" replace />}
       >
         <Route index element={<Dashboard />} />
-        <Route path="produtores" element={<Producers />} />
-        <Route path="produtores/:id" element={<ProducerDetail />} />
-        <Route path="producao" element={<ProductionPage />} />
-        <Route path="plantios/:id" element={<PlantingDetail />} />
-        <Route path="financeiro" element={<Finance />} />
-        <Route path="vendas" element={<Sales />} />
-        <Route path="relatorios" element={<Reports />} />
-        <Route path="relatorios/:id" element={<ReportDetail />} />
-        <Route path="configuracoes" element={<Config />} />
+        <Route path="produtores" element={<Produtores />} />
+        <Route path="produtores/:id" element={<DetalheProdutor />} />
+        <Route path="producao" element={<Producao />} />
+        <Route path="plantios/:id" element={<DetalhePlantio />} />
+        <Route path="financeiro" element={<Financeiro />} />
+        <Route path="vendas" element={<Vendas />} />
+        <Route path="relatorios" element={<Relatorios />} />
+        <Route path="relatorios/:id" element={<DetalheRelatorio />} />
+        <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

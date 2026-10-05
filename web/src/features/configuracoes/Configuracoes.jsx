@@ -10,7 +10,7 @@ import {
   Tabs,
 } from '../../components/ui.jsx'
 
-export function Config() {
+export function Configuracoes() {
   const { data, save } = useData()
   const { openModal, notify, confirm } = useOutletContext()
   const { canWrite, isAdmin } = usePerfil()

@@ -5,10 +5,10 @@ import {
   dateText,
   money,
   number,
-  plantingLabel,
-  plantingResult,
-  produced,
-  sold,
+  rotuloPlantio,
+  resultadoPlantio,
+  quantidadeProduzida,
+  quantidadeVendida,
   useData,
 } from '../../contexts/DataContext.jsx'
 import { usePerfil } from '../../contexts/AuthContext.jsx'
@@ -21,7 +21,7 @@ import {
   Tabs,
 } from '../../components/ui.jsx'
 
-export function Finance() {
+export function Financeiro() {
   const { data } = useData()
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') || 'despesas'
@@ -146,7 +146,7 @@ export function Finance() {
                         <div className="allocation-detail">
                           {row.allocations?.map((part) => (
                             <div key={part.plantingId}>
-                              {plantingLabel(
+                              {rotuloPlantio(
                                 data,
                                 byId(data.plantings, part.plantingId),
                               )}
@@ -189,7 +189,7 @@ export function Finance() {
                 {dailies.map((row) => (
                   <tr key={row.id} data-testid={`daily-row-${row.id}`}>
                     <td>
-                      {plantingLabel(
+                      {rotuloPlantio(
                         data,
                         byId(data.plantings, row.plantingId),
                       )}
@@ -264,18 +264,18 @@ export function Finance() {
                     </thead>
                     <tbody>
                       {plants.map((row) => {
-                        const result = plantingResult(data, row.id)
+                        const result = resultadoPlantio(data, row.id)
                         return (
                           <tr key={row.id} data-testid={`result-row-${row.id}`}>
                             <td>
-                              <strong>{plantingLabel(data, row)}</strong>
+                              <strong>{rotuloPlantio(data, row)}</strong>
                             </td>
                             <td>
-                              {number(produced(data, row.id), 3)}{' '}
+                              {number(quantidadeProduzida(data, row.id), 3)}{' '}
                               {byId(data.cultures, row.cultureId)?.unit}
                             </td>
                             <td>
-                              {number(sold(data, row.id), 3)}{' '}
+                              {number(quantidadeVendida(data, row.id), 3)}{' '}
                               {byId(data.cultures, row.cultureId)?.unit}
                             </td>
                             <td>{money(result.revenue)}</td>
