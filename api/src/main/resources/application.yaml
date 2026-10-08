@@ -7,6 +7,9 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
+    driver-class-name: ${DB_DRIVER_NAME}
+    hikari:
+      schema: ${DB_SCHEMA}
   jpa:
     open-in-view: false
     hibernate:
@@ -14,6 +17,12 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    placeholders:
+      ADMIN_LOGIN: ${admin.login}
+      ADMIN_SENHA: ${admin.senha}
+  admin:
+    login: ${ADMIN_LOGIN}
+    senha: ${ADMIN_SENHA}
   web:
     # Mensagens do Bean Validation sempre em português, independente do navegador (RNF03).
     locale: pt_BR
