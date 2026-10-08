@@ -23,3 +23,7 @@ spring:
   admin:
     login: ${ADMIN_LOGIN}
     senha: ${ADMIN_SENHA}
+  web:
+    # Mensagens do Bean Validation sempre em português, independente do navegador (RNF03).
+    locale: pt_BR
+    locale-resolver: fixed

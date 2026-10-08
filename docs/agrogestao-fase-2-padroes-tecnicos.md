@@ -61,6 +61,7 @@ agrogestao/
 │       ├── repository/
 │       ├── model/                # entidades JPA
 │       ├── dto/
+│       ├── exception/            # exceções de domínio e tratamento global de erro
 │       └── config/
 ├── web/                          # React + Vite
 │   └── src/
@@ -84,6 +85,8 @@ agrogestao/
 Dentro de `controller` e `service`, subpacotes por domínio. Com seis pessoas trabalhando em paralelo, isso evita que todos disputem os mesmos diretórios: quem cuida de plantio trabalha em `controller/plantio` e `service/plantio`.
 
 `repository`, `model`, `dto` e `config` ficam planos — têm um arquivo por entidade e não ganham nada com subdivisão.
+
+`exception` também fica plano. Guarda as exceções de domínio (`RegraNegocioException`, `RecursoNaoEncontradoException`) e o tratamento global de erro da seção 2.4.
 
 Serviços que cruzam domínios, como a apuração de resultado, ficam no subpacote do domínio que os ancora. `ResultadoService` mora em `service/plantio`, porque plantio é a unidade de apuração.
 
@@ -239,7 +242,20 @@ Resposta única para todo erro, para o front tratar em um lugar só:
 
 `mensagem` é exibível ao operador — escrita em português claro, sem jargão técnico. O operador do sindicato tem familiaridade intermediária; mensagem de erro incompreensível vira chamado para a equipe.
 
-Tratamento centralizado com `@RestControllerAdvice`. Nenhum `try/catch` devolvendo erro direto no Controller.
+`campos` é sempre uma lista — vazia quando o erro não se refere a um campo específico.
+
+Códigos do campo `erro`:
+
+| `erro` | Status | Quando |
+|---|---|---|
+| `VALIDACAO` | 400 | Bean Validation, JSON malformado, tipo inválido no corpo ou na URL. `campos` traz cada campo inválido |
+| `NAO_AUTENTICADO` | 401 | Requisição sem usuário autenticado |
+| `ACESSO_NEGADO` | 403 | Usuário sem permissão para o recurso |
+| `NAO_ENCONTRADO` | 404 | `RecursoNaoEncontradoException` ou rota inexistente |
+| `REGRA_NEGOCIO` | 422 | `RegraNegocioException`. Violação de constraint do banco também cai aqui, com mensagem genérica; o detalhe técnico vai só para o log |
+| `ERRO_INTERNO` | 500 | Erro não tratado. Sem stack trace na resposta; o detalhe vai para o log |
+
+Tratamento centralizado com `@RestControllerAdvice` (`exception/ApiExceptionHandler`). Nenhum `try/catch` devolvendo erro direto no Controller. Para sinalizar erro, o Service lança `RegraNegocioException` ou `RecursoNaoEncontradoException` com a mensagem para o operador. Os 401 e 403 do Spring Security saem no mesmo formato pelo entry point e pelo access denied handler configurados em `SecurityConfig`.
 
 ### Documentação
 
