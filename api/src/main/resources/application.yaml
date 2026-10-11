@@ -18,11 +18,8 @@ spring:
     enabled: true
     locations: classpath:db/migration
     placeholders:
-      ADMIN_LOGIN: ${admin.login}
-      ADMIN_SENHA: ${admin.senha}
-  admin:
-    login: ${ADMIN_LOGIN}
-    senha: ${ADMIN_SENHA}
+      ADMIN_LOGIN: ${ADMIN_LOGIN}
+      ADMIN_SENHA: ${ADMIN_SENHA}
   web:
     # Mensagens do Bean Validation sempre em português, independente do navegador (RNF03).
     locale: pt_BR
