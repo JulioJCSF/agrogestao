@@ -24,3 +24,8 @@ spring:
     # Mensagens do Bean Validation sempre em português, independente do navegador (RNF03).
     locale: pt_BR
     locale-resolver: fixed
+
+jwt:
+  # Chave de assinatura dos tokens (HS256). Sem valor padrão: a API não sobe sem ela.
+  segredo: ${JWT_SEGREDO}
+  expiracao-minutos: ${JWT_EXPIRACAO_MINUTOS:60}

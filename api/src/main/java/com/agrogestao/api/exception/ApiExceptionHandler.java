@@ -59,6 +59,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     return responder(CodigoErro.NAO_ENCONTRADO, ex.getMessage(), List.of());
   }
 
+  @ExceptionHandler(CredenciaisInvalidasException.class)
+  public ResponseEntity<ErroResposta> handleCredenciaisInvalidas(CredenciaisInvalidasException ex) {
+    return responder(CodigoErro.NAO_AUTENTICADO, ex.getMessage(), List.of());
+  }
+
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ErroResposta> handleDataIntegrityViolation(
       DataIntegrityViolationException ex) {
