@@ -22,8 +22,8 @@ import org.springframework.test.web.servlet.ResultActions;
 
 @WebMvcTest(controllers = ErroTesteController.class)
 @Import({
-  SecurityConfig.class, 
-  JsonPontoDeEntradaDeAutenticacao.class, 
+  SecurityConfig.class,
+  JsonPontoDeEntradaDeAutenticacao.class,
   JsonAcessoNegadoHandler.class
 })
 class ApiExceptionHandlerTest {
