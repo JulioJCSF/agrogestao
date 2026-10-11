@@ -178,6 +178,8 @@ docker compose up -d db
 
 No PowerShell, use `Copy-Item .env.example .env` no lugar do `cp`.
 
+Depois de copiar, preencha `JWT_SEGREDO` no `.env`: é a chave que assina os tokens de login, não tem valor padrão e precisa de pelo menos 32 caracteres. A API não sobe sem ela. Para gerar uma: `openssl rand -base64 48` (no Git Bash).
+
 ### Rodar a API
 
 A API lê o `.env` da raiz; não é preciso exportar variáveis.
@@ -207,6 +209,27 @@ Para só conferir, sem alterar nada, use `spotless:check` no lugar de `spotless:
 ### Swagger
 
 Com a API no ar: http://localhost:8080/swagger-ui.html
+
+Só o login e o próprio Swagger são públicos; os demais endpoints exigem token. Para logar com o administrador inicial:
+
+1. Em **Autenticação**, abra `POST /api/v1/auth/login`, clique em **Try it out** e envie o `ADMIN_LOGIN` e a `ADMIN_SENHA` do seu `.env`:
+   ```json
+   { "login": "admin", "senha": "admin_dev" }
+   ```
+2. Copie o valor de `token` da resposta.
+3. Clique em **Authorize** (no topo da página), cole o token e confirme. Não digite `Bearer`; o Swagger acrescenta.
+4. Confira com `GET /api/v1/auth/me`, que devolve o usuário logado.
+
+O token vale `JWT_EXPIRACAO_MINUTOS` (60 por padrão). Quando expirar, a API responde 401 e é preciso logar de novo.
+
+### Testes da API
+
+A partir de `api/`, com o banco do Compose no ar:
+
+- Unitários: `./mvnw test`
+- Integração do login: `./mvnw test -Dtest=AuthIT`
+
+No PowerShell, use `.\mvnw.cmd` e coloque o parâmetro entre aspas: `.\mvnw.cmd test "-Dtest=AuthIT"`.
 
 ### Conflito na porta 5432
 
