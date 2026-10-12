@@ -37,9 +37,10 @@ export function Action({
 export function Empty({
   title = 'Nenhum registro encontrado',
   detail = 'Cadastre uma informação para começar.',
+  ...props
 }) {
   return (
-    <div className="empty">
+    <div {...props} className="empty">
       <ClipboardList size={28} />
       <strong>{title}</strong>
       <span>{detail}</span>
