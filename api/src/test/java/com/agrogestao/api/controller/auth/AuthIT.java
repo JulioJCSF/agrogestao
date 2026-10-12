@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.agrogestao.api.IntegracaoTest;
 import com.agrogestao.api.model.Perfil;
 import com.agrogestao.api.model.Usuario;
 import com.agrogestao.api.repository.UsuarioRepository;
@@ -17,8 +18,6 @@ import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,13 +31,11 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Integração do login com o banco do Compose (até a F02 trazer o Testcontainers). Cria os próprios
- * usuários e desfaz tudo ao fim de cada teste.
+ * Integração do login com PostgreSQL efêmero. Cria os próprios usuários e desfaz tudo ao fim de
+ * cada teste.
  */
-@SpringBootTest(properties = "jwt.segredo=segredo-de-teste-com-mais-de-32-caracteres")
-@AutoConfigureMockMvc
 @Transactional
-class AuthIT {
+class AuthIT extends IntegracaoTest {
 
   private static final String SENHA = "senha-de-teste";
   private static final String MENSAGEM_LOGIN_INVALIDO = "Login ou senha inválidos.";

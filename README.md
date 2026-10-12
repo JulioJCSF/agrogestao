@@ -224,12 +224,16 @@ O token vale `JWT_EXPIRACAO_MINUTOS` (60 por padrão). Quando expirar, a API res
 
 ### Testes da API
 
-A partir de `api/`, com o banco do Compose no ar:
+A partir de `api/`:
 
-- Unitários: `./mvnw test`
-- Integração do login: `./mvnw test -Dtest=AuthIT`
+- Unitários: `./mvnw test` — não usam o Compose nem exigem Docker.
+- Verificação completa: `./mvnw verify` — unitários, integração e Spotless. Exige Docker Desktop no ar, mas não o banco do Compose.
+- Integração específica: `./mvnw verify -Dit.test=AuthIT`.
+- Formatação: `./mvnw spotless:apply`.
 
-No PowerShell, use `.\mvnw.cmd` e coloque o parâmetro entre aspas: `.\mvnw.cmd test "-Dtest=AuthIT"`.
+No PowerShell, use `.\mvnw.cmd` e coloque parâmetros `-D` entre aspas.
+
+Surefire executa classes `*Test`; Failsafe executa `*IT` no `verify`. A base `IntegracaoTest` importa `PostgresTesteConfig`, usa `@ServiceConnection` e a imagem `postgres:17-alpine`. O perfil `test` define os placeholders sintéticos do admin e ignora o `.env`. Os testes não alteram o banco local.
 
 ### Conflito na porta 5432
 

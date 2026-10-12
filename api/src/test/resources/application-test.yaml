@@ -1,0 +1,16 @@
+spring:
+  config:
+    import: ""
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      schema: public
+  flyway:
+    locations: classpath:db/migration
+    placeholders:
+      ADMIN_LOGIN: ${ADMIN_LOGIN}
+      ADMIN_SENHA: ${ADMIN_SENHA}
+ADMIN_LOGIN: admin-teste-sintetico
+ADMIN_SENHA: senha-exclusiva-de-fixture
+jwt:
+  segredo: segredo-sintetico-exclusivo-dos-testes-12345
