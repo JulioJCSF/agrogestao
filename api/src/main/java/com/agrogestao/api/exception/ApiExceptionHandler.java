@@ -49,6 +49,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
   static final String MENSAGEM_ERRO_INTERNO =
       "Ocorreu um erro inesperado. Tente novamente e, se persistir, contate o suporte.";
 
+  @ExceptionHandler(ApiNaoImplementadaException.class)
+  public ResponseEntity<ErroResposta> handleNaoImplementado(ApiNaoImplementadaException ex) {
+    return responder(CodigoErro.NAO_IMPLEMENTADO, ex.getMessage(), List.of());
+  }
+
   @ExceptionHandler(RegraNegocioException.class)
   public ResponseEntity<ErroResposta> handleRegraNegocio(RegraNegocioException ex) {
     return responder(CodigoErro.REGRA_NEGOCIO, ex.getMessage(), ex.getCampos());

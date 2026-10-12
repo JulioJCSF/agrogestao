@@ -1,0 +1,3 @@
+# Massa adicional exclusivamente local. Não altera a location nem checksums do Flyway.
+agrogestao:
+  massa-dev: true
