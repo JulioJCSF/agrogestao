@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { byId, rotuloPlantio, useData } from '../contexts/DataContext.jsx'
+import { Field } from './CampoFormulario.jsx'
+import { formatCpf, localToday } from './formularioValores.js'
+import { campoDoFormulario } from '../services/registroService.js'
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = localToday
 
 const titles = {
   record: ['Novo registro', 'Adicione uma nova informação ao AgroGestão.'],
@@ -39,103 +42,6 @@ const titles = {
     'Encerrar plantio',
     'Informe a data de encerramento do ciclo produtivo.',
   ],
-}
-
-function formatCpf(value) {
-  const digits = String(value || '')
-    .replace(/\D/g, '')
-    .slice(0, 11)
-  return digits
-    .replace(/^(\d{3})(\d)/, '$1.$2')
-    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/\.(\d{3})(\d)/, '.$1-$2')
-}
-
-function displayCurrency(value) {
-  if (value === '' || value == null) return ''
-  const [integer, fraction = ''] = String(value).replace(',', '.').split('.')
-  const grouped = (integer.replace(/\D/g, '') || '0').replace(
-    /\B(?=(\d{3})+(?!\d))/g,
-    '.',
-  )
-  return `R$ ${grouped},${fraction.padEnd(2, '0').slice(0, 2)}`
-}
-
-function readCurrency(value) {
-  const digits = value.replace(/\D/g, '')
-  if (!digits) return ''
-  return `${digits.slice(0, -2) || '0'}.${digits.slice(-2).padStart(2, '0')}`
-}
-
-function Field({
-  name,
-  label,
-  value,
-  onChange,
-  type = 'text',
-  required = false,
-  options,
-  hint,
-  min,
-  step,
-  disabled,
-  error,
-}) {
-  const id = `field-${name}`
-  return (
-    <label className="field" htmlFor={id}>
-      <span>
-        {label}
-        {required && <b aria-hidden="true"> *</b>}
-      </span>
-      {options ? (
-        <select
-          id={id}
-          data-testid={id}
-          value={value ?? ''}
-          onChange={(event) => onChange(event.target.value)}
-          required={required}
-          disabled={disabled}
-          aria-invalid={Boolean(error)}
-        >
-          <option value="">Selecione</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input
-          id={id}
-          data-testid={id}
-          type={type === 'currency' ? 'text' : type}
-          lang={type === 'date' ? 'pt-BR' : undefined}
-          inputMode={type === 'currency' ? 'decimal' : undefined}
-          value={type === 'currency' ? displayCurrency(value) : (value ?? '')}
-          onChange={(event) =>
-            onChange(
-              type === 'currency'
-                ? readCurrency(event.target.value)
-                : event.target.value,
-            )
-          }
-          required={required}
-          min={min}
-          step={step}
-          disabled={disabled}
-          aria-invalid={Boolean(error)}
-          placeholder={`Informe ${label.toLowerCase()}`}
-        />
-      )}
-      {hint && <small>{hint}</small>}
-      {error && (
-        <small className="form-error" role="alert">
-          {error}
-        </small>
-      )}
-    </label>
-  )
 }
 
 function initialValues(type, item, defaults, data) {
@@ -209,7 +115,7 @@ function initialValues(type, item, defaults, data) {
     report: { producerId: firstProducer, from: '', to: today() },
     category: { name: '', system: false },
     reference: { value: '', startsAt: today() },
-    user: { nome: '', login: '', perfil: 'OPERADOR', ativo: true },
+    user: { nome: '', login: '', perfil: 'LANCAMENTO', ativo: true },
   }
   return { ...base[type], ...defaults }
 }
@@ -268,7 +174,15 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
         return
       }
       const fields = {
-        producer: ['name', 'cpf', 'phone', 'community', 'consentAt'],
+        producer: [
+          'name',
+          'cpf',
+          'phone',
+          'community',
+          'profissao',
+          'consentAt',
+          'status',
+        ],
         property: ['producerId', 'name', 'area', 'location'],
         culture: ['name', 'cycle', 'unit'],
         planting: [
@@ -278,6 +192,7 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
           'area',
           'startedAt',
           'expectedAt',
+          'cycle',
         ],
         production: ['plantingId', 'amount', 'unit', 'date'],
         expense: [
@@ -323,7 +238,10 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
       setError(cause.message)
       setFieldErrors(
         Object.fromEntries(
-          (cause.campos || []).map(({ campo, mensagem }) => [campo, mensagem]),
+          (cause.campos || []).map(({ campo, mensagem }) => [
+            campoDoFormulario(type, campo),
+            mensagem,
+          ]),
         ),
       )
     } finally {
@@ -409,14 +327,18 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
                 <Field
                   name="cpf"
                   label="CPF"
+                  type="cpf"
+                  required
+                  error={fieldErrors.cpf}
                   value={form.cpf}
                   onChange={(value) => set('cpf', formatCpf(value))}
-                  hint="Opcional. Somente números são armazenados."
+                  hint="Somente os 11 dígitos são enviados."
                 />
                 <div className="form-grid">
                   {field('phone', 'Telefone')}
                   {field('community', 'Comunidade')}
                 </div>
+                {field('profissao', 'Profissão')}
                 {boolField(
                   'consentAt',
                   'Consentimento registrado para emissão de relatório',
@@ -821,7 +743,7 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
                 {field('perfil', 'Perfil', {
                   options: [
                     { value: 'ADMIN', label: 'Administrador' },
-                    { value: 'OPERADOR', label: 'Operador' },
+                    { value: 'LANCAMENTO', label: 'Operador' },
                     { value: 'CONSULTA', label: 'Consulta' },
                   ],
                   required: true,

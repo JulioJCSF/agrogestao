@@ -11,6 +11,8 @@ api/.mvn/wrapper/maven-wrapper.jar
 ### Node (web/, e2e/) ###
 node_modules/
 dist/
+web/test-results/
+web/playwright-report/
 
 ### STS ###
 .apt_generated

@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from './AuthContext.jsx'
 import {
   listarTodos,
-  mockEnabled,
   readMock,
   removerRegistro,
   salvarRegistro,
@@ -33,12 +32,17 @@ const emptyData = {
 export function DataProvider({ children }) {
   const { session } = useAuth()
   const [data, setData] = useState(() =>
-    session?.demo || mockEnabled ? readMock() : emptyData,
+    session?.demo ? readMock() : emptyData,
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   useEffect(() => {
-    if (!session) return
+    if (!session) {
+      setData(emptyData)
+      setError('')
+      return
+    }
+    setData(session.demo ? readMock() : emptyData)
     let active = true
     setLoading(true)
     listarTodos(session.demo, session.user?.perfil)

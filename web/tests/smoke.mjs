@@ -16,7 +16,10 @@ try {
   const { smokeTree } = await vite.ssrLoadModule('/tests/smoke-entry.jsx')
   globalThis.sessionStorage.setItem(
     'agrogestao-session',
-    JSON.stringify({ demo: true, user: { nome: 'Teste', perfil: 'OPERADOR' } }),
+    JSON.stringify({
+      demo: true,
+      user: { nome: 'Teste', perfil: 'LANCAMENTO' },
+    }),
   )
   const expected = new Map([
     ['/', 'Visão geral'],
