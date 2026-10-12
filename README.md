@@ -113,7 +113,7 @@ Abra o endereço mostrado pelo Vite. Na tela de login, **Explorar prévia com da
 
 Para usar a prévia estática, copie `web/.env.example` para `web/.env.local` e inicie o Vite. Com `VITE_USAR_MOCK=true`, o botão **Explorar prévia** mostra inclusive a interface de administração, sem autenticar ninguém. Para solicitar dados reais, use `VITE_USAR_MOCK=false` e reinicie o Vite. O login e as operações reais dependem da API; as telas usam `web/src/services/registroService.js`, e o cliente Axios usa `/api/v1`, com proxy local para `http://localhost:8080`.
 
-O contrato do MVP está publicado no Swagger pela F13: DTOs, exemplos, paginação e endpoints. O login tem implementação real; os demais endpoints respondem `501 NAO_IMPLEMENTADO` até as issues dos respectivos módulos. A integração dos adaptadores do front está em PR separado. Cálculos de resultado, saldo, rateio, relatório e regras de acesso pertencem à API; os números da prévia são exemplos estáticos. Para verificar o front-end, rode `npm run build`, `npm run lint` e `npm run smoke` dentro de `web/`.
+O contrato do MVP está publicado no Swagger pela F13: DTOs, exemplos, paginação e endpoints. Login, propriedades, culturas e categorias de despesa têm implementação real; os demais endpoints respondem `501 NAO_IMPLEMENTADO` até as issues dos respectivos módulos. A integração dos adaptadores do front está em PR separado. Cálculos de resultado, saldo, rateio, relatório e regras de acesso pertencem à API; os números da prévia são exemplos estáticos. Para verificar o front-end, rode `npm run build`, `npm run lint` e `npm run smoke` dentro de `web/`.
 
 ## Documentação do projeto
 
