@@ -1,12 +1,13 @@
 package com.agrogestao.api.controller.cultura;
 
 import com.agrogestao.api.dto.*;
-import com.agrogestao.api.exception.ApiNaoImplementadaException;
+import com.agrogestao.api.service.cultura.CulturaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.time.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -31,38 +32,33 @@ import org.springframework.web.bind.annotation.*;
 })
 public class CulturaController {
 
+  private final CulturaService service;
+
   @GetMapping("/api/v1/culturas")
-  @Operation(
-      summary = "Lista com busca e paginação",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Lista com busca e paginação")
   public PaginaResposta<CulturaResposta> listar(
       @RequestParam(defaultValue = "") String busca,
       @Valid @ModelAttribute PaginacaoConsulta consulta) {
-    throw new ApiNaoImplementadaException();
+    return service.listar(busca, consulta);
   }
 
   @GetMapping("/api/v1/culturas/{id}")
-  @Operation(
-      summary = "Detalha o cadastro",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Detalha o cadastro")
   public CulturaResposta detalhar(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    return service.detalhar(id);
   }
 
   @PostMapping("/api/v1/culturas")
-  @Operation(
-      summary = "Cria o cadastro",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Cria o cadastro")
   @ApiResponse(responseCode = "201", description = "Criado com Location")
   public ResponseEntity<CulturaResposta> criar(@Valid @RequestBody CulturaRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    CulturaResposta resposta = service.criar(dto);
+    return ResponseEntity.created(URI.create("/api/v1/culturas/" + resposta.id())).body(resposta);
   }
 
   @PutMapping("/api/v1/culturas/{id}")
-  @Operation(
-      summary = "Altera o cadastro",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Altera o cadastro")
   public CulturaResposta alterar(@PathVariable Long id, @Valid @RequestBody CulturaRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    return service.alterar(id, dto);
   }
 }

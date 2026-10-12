@@ -1,12 +1,13 @@
 package com.agrogestao.api.controller.categoria;
 
 import com.agrogestao.api.dto.*;
-import com.agrogestao.api.exception.ApiNaoImplementadaException;
+import com.agrogestao.api.service.categoria.CategoriaDespesaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.time.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -31,49 +32,43 @@ import org.springframework.web.bind.annotation.*;
 })
 public class CategoriaDespesaController {
 
+  private final CategoriaDespesaService service;
+
   @GetMapping("/api/v1/categorias-despesa")
-  @Operation(
-      summary = "Lista com busca e paginação",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Lista com busca e paginação")
   public PaginaResposta<CategoriaDespesaResposta> listar(
       @RequestParam(defaultValue = "") String busca,
       @Valid @ModelAttribute PaginacaoConsulta consulta) {
-    throw new ApiNaoImplementadaException();
+    return service.listar(busca, consulta);
   }
 
   @GetMapping("/api/v1/categorias-despesa/{id}")
-  @Operation(
-      summary = "Detalha o cadastro",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Detalha o cadastro")
   public CategoriaDespesaResposta detalhar(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    return service.detalhar(id);
   }
 
   @PostMapping("/api/v1/categorias-despesa")
-  @Operation(
-      summary = "Cria o cadastro",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Cria o cadastro")
   @ApiResponse(responseCode = "201", description = "Criado com Location")
   public ResponseEntity<CategoriaDespesaResposta> criar(
       @Valid @RequestBody CategoriaDespesaRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    CategoriaDespesaResposta resposta = service.criar(dto);
+    return ResponseEntity.created(URI.create("/api/v1/categorias-despesa/" + resposta.id()))
+        .body(resposta);
   }
 
   @PutMapping("/api/v1/categorias-despesa/{id}")
-  @Operation(
-      summary = "Altera o cadastro",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Altera o cadastro")
   public CategoriaDespesaResposta alterar(
       @PathVariable Long id, @Valid @RequestBody CategoriaDespesaRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    return service.alterar(id, dto);
   }
 
   @DeleteMapping("/api/v1/categorias-despesa/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(
-      summary = "Exclui categoria personalizada sem despesas",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Exclui categoria personalizada sem despesas")
   public void excluir(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    service.excluir(id);
   }
 }
