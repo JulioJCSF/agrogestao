@@ -222,14 +222,28 @@ Só o login e o próprio Swagger são públicos; os demais endpoints exigem toke
 
 O token vale `JWT_EXPIRACAO_MINUTOS` (60 por padrão). Quando expirar, a API responde 401 e é preciso logar de novo.
 
+### Perfil dev e massa sintética
+
+A partir de `api/`: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` (PowerShell: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"`).
+
+O perfil `dev` carrega `db/dev/dados-sinteticos.sql` depois das migrations, com um inicializador idempotente: três produtores claramente fictícios, CPFs gerados com dígitos verificadores, propriedades e plantios do catálogo. O perfil padrão e os testes comuns não executam esse inicializador.
+
+**Limitação da F12 (#86):** a migration antiga `V20261005_1020` já contém exemplos, usuários de exemplo e referências em todos os perfis. Ela foi preservada conforme orientação desta entrega. A massa adicional fica em `dev`; a separação integral da carga antiga ainda exige decisão, e #86 permanece aberta. Não há nova migration nem alteração de checksum.
+
+Para zerar somente o banco local de desenvolvimento, pare a API e execute `docker compose down -v` na raiz, depois `docker compose up -d db`. O comando apaga o volume local e todos os registros nele.
+
 ### Testes da API
 
-A partir de `api/`, com o banco do Compose no ar:
+A partir de `api/`:
 
-- Unitários: `./mvnw test`
-- Integração do login: `./mvnw test -Dtest=AuthIT`
+- Unitários: `./mvnw test` — não usam o Compose nem exigem Docker.
+- Verificação completa: `./mvnw verify` — unitários, integração e Spotless. Exige Docker Desktop no ar, mas não o banco do Compose.
+- Integração específica: `./mvnw verify -Dit.test=AuthIT`.
+- Formatação: `./mvnw spotless:apply`.
 
-No PowerShell, use `.\mvnw.cmd` e coloque o parâmetro entre aspas: `.\mvnw.cmd test "-Dtest=AuthIT"`.
+No PowerShell, use `.\mvnw.cmd` e coloque parâmetros `-D` entre aspas.
+
+Surefire executa classes `*Test`; Failsafe executa `*IT` no `verify`. A base `IntegracaoTest` importa `PostgresTesteConfig`, usa `@ServiceConnection` e a imagem `postgres:17-alpine`. O perfil `test` define os placeholders sintéticos do admin e ignora o `.env`. Os testes não alteram o banco local.
 
 ### Conflito na porta 5432
 
