@@ -218,31 +218,30 @@ Todas as listas do contrato usam:
 
 `pagina` começa em zero; `tamanho` padrão 20, permitido de 1 a 100. Ordenação determinística por id. Valores fora dos limites respondem 400 `VALIDACAO`. Busca textual usa `busca`; filtros de intervalo usam `periodoInicio` e `periodoFim`. Datas são `AAAA-MM-DD`; instantes são ISO-8601 em UTC. O front exibe datas em dd/mm/aaaa. CPF usa `documento` com 11 dígitos; dinheiro usa número decimal no JSON e BigDecimal no Java.
 
-Essa paginação e as assinaturas compõem a proposta técnica da F13; revisão de uma pessoa do front é necessária antes do merge. Não foram simuladas aprovações externas.
+Essa paginação e as assinaturas compõem a proposta técnica da F13; revisão de uma pessoa do front é necessária antes do merge.
 
 ### Contratos por módulo
 
-| Módulo | Endpoints principais | Nesta entrega |
-|---|---|---|
-| Autenticação | POST /auth/login; GET /auth/me | Implementados (F04a) |
-| Produtores | GET/POST /produtores; GET/PUT/DELETE /produtores/{id} | Esqueleto 501; PUT inclui ativo e consentimentoEm |
-| Propriedades | GET/POST /produtores/{produtorId}/propriedades; GET/PUT /propriedades/{id} | Implementados (C02); nome obrigatório, área e localização opcionais |
-| Culturas | GET/POST /culturas; GET/PUT /culturas/{id} | Implementados (C05); tipoCicloPadrao CURTO/LONGO |
-| Plantios | GET/POST /plantios; GET/PUT /plantios/{id}; POST /plantios/{id}/encerramento | Esqueleto 501; encerramento recebe dataEncerramento |
-| Produção | GET/POST /plantios/{plantioId}/producoes; GET/PUT/DELETE /producoes/{id} | Esqueleto 501; quantidade, unidadeMedida, dataFato |
-| Categorias | GET/POST /categorias-despesa; GET/PUT/DELETE /categorias-despesa/{id} | Implementados (L11); categoria de sistema protegida com 422 |
-| Despesas | GET/POST /despesas; GET/PUT/DELETE /despesas/{id}; POST /despesas/{id}/estorno; GET /plantios/{plantioId}/despesas | Esqueleto 501; contrato descrito acima |
-| Referência de diária | GET/POST /valores-referencia-diaria; GET/PUT /valores-referencia-diaria/{id}; GET /valores-referencia-diaria/vigente?dataFato=... | Esqueleto 501; valor, vigenciaInicio, vigenciaFim opcional |
-| Diárias | GET/POST /plantios/{plantioId}/diarias; GET/PUT/DELETE /diarias/{id} | Esqueleto 501; natureza, quantidadeDias, valorUnitario (paga), dataFato |
-| Clientes e vendas | GET/POST /clientes e /vendas; GET/PUT /clientes/{id}; GET/PUT/DELETE /vendas/{id} | Esqueleto 501; venda inclui produtorId, clienteId, dataFato e itens |
-| Resultado | GET /plantios/{id}/resultado?mes=AAAA-MM | Esqueleto 501; mês para ciclo curto, período efetivo vem na resposta |
-| Relatórios | POST /relatorios; GET /produtores/{produtorId}/relatorios; GET /relatorios/{id} | Esqueleto 501; emissão recebe produtorId, periodoInicio, periodoFim; resposta inclui conteúdo tipado |
-| Usuários | GET/POST /usuarios; PUT /usuarios/{id} | Esqueleto 501; criação tem senha, respostas nunca a expõem; sem exclusão |
-| Complementos | GET /plantios/{id}/saldo; GET /painel | Esqueleto 501; saldo informativo, sem entidade de estoque |
-
+| Módulo | Endpoints principais |
+|---|---|
+| Autenticação | POST /auth/login; GET /auth/me |
+| Produtores | GET/POST /produtores; GET/PUT/DELETE /produtores/{id} |
+| Propriedades | GET/POST /produtores/{produtorId}/propriedades; GET/PUT /propriedades/{id} |
+| Culturas | GET/POST /culturas; GET/PUT /culturas/{id} |
+| Plantios | GET/POST /plantios; GET/PUT /plantios/{id}; POST /plantios/{id}/encerramento |
+| Produção | GET/POST /plantios/{plantioId}/producoes; GET/PUT/DELETE /producoes/{id} |
+| Categorias | GET/POST /categorias-despesa; GET/PUT/DELETE /categorias-despesa/{id} |
+| Despesas | GET/POST /despesas; GET/PUT/DELETE /despesas/{id}; POST /despesas/{id}/estorno; GET /plantios/{plantioId}/despesas |
+| Referência de diária | GET/POST /valores-referencia-diaria; GET/PUT /valores-referencia-diaria/{id}; GET /valores-referencia-diaria/vigente?dataFato=... |
+| Diárias | GET/POST /plantios/{plantioId}/diarias; GET/PUT/DELETE /diarias/{id} |
+| Clientes e vendas | GET/POST /clientes e /vendas; GET/PUT /clientes/{id}; GET/PUT/DELETE /vendas/{id} |
+| Resultado | GET /plantios/{id}/resultado?mes=AAAA-MM |
+| Relatórios | POST /relatorios; GET /produtores/{produtorId}/relatorios; GET /relatorios/{id} |
+| Usuários | GET/POST /usuarios; PUT /usuarios/{id} |
+| Complementos | GET /plantios/{id}/saldo; GET /painel |
 Todos os caminhos da tabela têm prefixo `/api/v1`. Os DTOs e exemplos concretos são gerados do código no Swagger; ele é a referência completa de campos e parâmetros.
 
-A emissão não aceita conteúdo apurado do cliente. O conteúdo de resposta inclui produtor, propriedades, resultados por plantio, despesas, diárias e ambas as ressalvas. O histórico lê a emissão gravada. Encerramento e emissão usam POST; estorno preserva o registro. Essas assinaturas não antecipam as decisões de negócio ainda pendentes em A01/A03a/L09b (período de safra, efeito do estorno e venda sem produção).
+A emissão não aceita conteúdo apurado do cliente. O conteúdo de resposta inclui produtor, propriedades, resultados por plantio, despesas, diárias e ambas as ressalvas. O histórico lê a emissão gravada. POST de domínio responde 201 com `Location`, inclusive encerramento e estorno; o POST de autenticação responde 200. Encerramento e emissão usam POST; estorno preserva o registro. O resultado de cada plantio no conteúdo gravado inclui `culturaNome` e `propriedadeNome`, preservados como snapshot junto aos valores apurados (RN31 e RN34). Essas assinaturas não antecipam as decisões de negócio ainda pendentes em A01/A03a/L09b (período de safra, efeito do estorno e venda sem produção).
 
 ### Códigos de status
 

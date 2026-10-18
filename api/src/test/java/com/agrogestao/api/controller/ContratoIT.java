@@ -6,16 +6,126 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.agrogestao.api.IntegracaoTest;
+import com.agrogestao.api.dto.*;
 import com.jayway.jsonpath.JsonPath;
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 class ContratoIT extends IntegracaoTest {
   @Autowired MockMvc mvc;
+
+  @Autowired
+  @Qualifier("requestMappingHandlerMapping")
+  RequestMappingHandlerMapping mappings;
+
+  @Test
+  void deveDeclararCriacaoComLocationEExclusaoSemCorpoQuandoSwaggerForConsultado()
+      throws Exception {
+    String body =
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    Map<String, Map<String, Map<String, Object>>> paths = JsonPath.read(body, "$.paths");
+    paths.forEach(
+        (path, operations) -> {
+          if (!path.startsWith("/api/v1/") || path.startsWith("/api/v1/auth/")) return;
+          for (String method : List.of("post", "delete")) {
+            if (!operations.containsKey(method)) continue;
+            Map<String, Object> responses =
+                (Map<String, Object>) operations.get(method).get("responses");
+            String expected = method.equals("post") ? "201" : "204";
+            assertThat(responses)
+                .as(method + " " + path)
+                .containsKey(expected)
+                .doesNotContainKey("200");
+            Map<String, Object> success = (Map<String, Object>) responses.get(expected);
+            if (method.equals("post")) {
+              assertThat((Map<String, Object>) success.get("headers")).containsKey("Location");
+            } else {
+              assertThat(success).doesNotContainKey("content");
+            }
+          }
+        });
+    mappings
+        .getHandlerMethods()
+        .forEach(
+            (mapping, handler) -> {
+              if (mapping.getPatternValues().stream()
+                  .noneMatch(
+                      path -> path.startsWith("/api/v1/") && !path.startsWith("/api/v1/auth/")))
+                return;
+              var methods = mapping.getMethodsCondition().getMethods();
+              if (methods.contains(RequestMethod.POST)) {
+                assertThat(handler.getMethod().getReturnType()).isEqualTo(ResponseEntity.class);
+                assertThat(handler.getMethodAnnotation(ResponseStatus.class).value().value())
+                    .isEqualTo(201);
+              }
+              if (methods.contains(RequestMethod.DELETE)) {
+                assertThat(handler.getMethodAnnotation(ResponseStatus.class).value().value())
+                    .isEqualTo(204);
+              }
+            });
+  }
+
+  @Test
+  void deveIncluirNomesNoSnapshotQuandoContratoDeRelatorioForPublicado() throws Exception {
+    String body =
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    Map<String, Object> properties =
+        JsonPath.read(body, "$.components.schemas.ResultadoPlantioResposta.properties");
+    assertThat(properties).containsKeys("culturaNome", "propriedadeNome");
+    for (Class<?> dto :
+        List.of(
+            ResultadoPlantioResposta.class,
+            ConteudoRelatorioResposta.class,
+            EmissaoRelatorioResposta.class)) {
+      String example = dto.getAnnotation(Schema.class).example();
+      String prefix =
+          dto == ResultadoPlantioResposta.class
+              ? "$"
+              : dto == ConteudoRelatorioResposta.class ? "$.plantios[0]" : "$.conteudo.plantios[0]";
+      assertThat((String) JsonPath.read(example, prefix + ".culturaNome"))
+          .isEqualTo("Cultura Fictícia");
+      assertThat((String) JsonPath.read(example, prefix + ".propriedadeNome"))
+          .isEqualTo("Propriedade Fictícia");
+    }
+  }
+
+  @Test
+  void devePublicarExemplosValidosQuandoSwaggerForGerado() {
+    for (Class<?> dto :
+        List.of(
+            DespesaResposta.class,
+            DespesaPlantioResposta.class,
+            ConteudoRelatorioResposta.class,
+            EmissaoRelatorioResposta.class)) {
+      String example = dto.getAnnotation(Schema.class).example();
+      String prefix =
+          dto == EmissaoRelatorioResposta.class
+              ? "$.conteudo.despesas[0]"
+              : dto == ConteudoRelatorioResposta.class ? "$.despesas[0]" : "$";
+      assertThat((Boolean) JsonPath.read(example, prefix + ".estornada")).isFalse();
+    }
+    String example = ProdutorRequisicao.class.getAnnotation(Schema.class).example();
+    assertThat((String) JsonPath.read(example, "$.documento")).isEqualTo("99900000188");
+  }
 
   @Test
   void devePublicarTodosOsModulosQuandoSwaggerForConsultado() throws Exception {

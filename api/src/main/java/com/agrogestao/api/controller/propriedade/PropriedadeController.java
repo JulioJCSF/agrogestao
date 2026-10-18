@@ -3,6 +3,7 @@ package com.agrogestao.api.controller.propriedade;
 import com.agrogestao.api.dto.*;
 import com.agrogestao.api.service.propriedade.PropriedadeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,7 +44,15 @@ public class PropriedadeController {
 
   @PostMapping("/api/v1/produtores/{produtorId}/propriedades")
   @Operation(summary = "Cadastra propriedade do produtor")
-  @ApiResponse(responseCode = "201", description = "Criada com Location")
+  @ResponseStatus(HttpStatus.CREATED)
+  @ApiResponse(
+      responseCode = "201",
+      description = "Criado com Location",
+      headers =
+          @Header(
+              name = "Location",
+              description = "URL do recurso criado",
+              schema = @Schema(type = "string", format = "uri")))
   public ResponseEntity<PropriedadeResposta> criar(
       @PathVariable Long produtorId, @Valid @RequestBody PropriedadeRequisicao dto) {
     PropriedadeResposta resposta = service.criar(produtorId, dto);
