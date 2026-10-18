@@ -1,13 +1,14 @@
 package com.agrogestao.api.controller.propriedade;
 
 import com.agrogestao.api.dto.*;
-import com.agrogestao.api.exception.ApiNaoImplementadaException;
+import com.agrogestao.api.service.propriedade.PropriedadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.time.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -32,19 +33,17 @@ import org.springframework.web.bind.annotation.*;
 })
 public class PropriedadeController {
 
+  private final PropriedadeService service;
+
   @GetMapping("/api/v1/produtores/{produtorId}/propriedades")
-  @Operation(
-      summary = "Lista as propriedades do produtor",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Lista as propriedades do produtor")
   public PaginaResposta<PropriedadeResposta> listar(
       @PathVariable Long produtorId, @Valid @ModelAttribute PaginacaoConsulta consulta) {
-    throw new ApiNaoImplementadaException();
+    return service.listar(produtorId, consulta);
   }
 
   @PostMapping("/api/v1/produtores/{produtorId}/propriedades")
-  @Operation(
-      summary = "Cadastra propriedade do produtor",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Cadastra propriedade do produtor")
   @ResponseStatus(HttpStatus.CREATED)
   @ApiResponse(
       responseCode = "201",
@@ -56,23 +55,21 @@ public class PropriedadeController {
               schema = @Schema(type = "string", format = "uri")))
   public ResponseEntity<PropriedadeResposta> criar(
       @PathVariable Long produtorId, @Valid @RequestBody PropriedadeRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    PropriedadeResposta resposta = service.criar(produtorId, dto);
+    return ResponseEntity.created(URI.create("/api/v1/propriedades/" + resposta.id()))
+        .body(resposta);
   }
 
   @GetMapping("/api/v1/propriedades/{id}")
-  @Operation(
-      summary = "Detalha propriedade",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Detalha propriedade")
   public PropriedadeResposta detalhar(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    return service.detalhar(id);
   }
 
   @PutMapping("/api/v1/propriedades/{id}")
-  @Operation(
-      summary = "Altera propriedade mantendo o produtor",
-      description = "Esqueleto F13: responde 501 até a implementação dos cadastros.")
+  @Operation(summary = "Altera propriedade mantendo o produtor")
   public PropriedadeResposta alterar(
       @PathVariable Long id, @Valid @RequestBody PropriedadeRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    return service.alterar(id, dto);
   }
 }

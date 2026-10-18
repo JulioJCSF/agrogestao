@@ -5,9 +5,9 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CulturaRepository extends JpaRepository<Cultura, Long> {
-  boolean existsByNome(String nome);
+  boolean existsByNomeIgnoreCase(String nome);
 
-  boolean existsByNomeAndIdNot(String nome, Long id);
+  boolean existsByNomeIgnoreCaseAndIdNot(String nome, Long id);
 
   Page<Cultura> findByNomeContainingIgnoreCase(String busca, Pageable pageable);
 }
