@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Button, Input, Label, TextField } from '@heroui/react'
+import { Confirmacao, Carregando } from './components/Feedback.jsx'
 import {
   NavLink,
   Navigate,
@@ -74,7 +76,7 @@ function navIsActive(to, location) {
 
 function AppLayout() {
   const { session, logout } = useAuth()
-  const { loading: dataLoading, error: dataError } = useData()
+  const { loading: dataLoading, error: dataError, data } = useData()
   const navigate = useNavigate()
   const location = useLocation()
   const [modal, setModal] = useState(null)
@@ -298,6 +300,16 @@ function AppLayout() {
             {dataError}
           </div>
         )}
+        {data.indisponiveis?.length > 0 && (
+          <div
+            className="notice-banner"
+            role="status"
+            data-testid="modules-unavailable"
+          >
+            Algumas consultas ainda estão indisponíveis. Os cadastros
+            disponíveis podem ser utilizados.
+          </div>
+        )}
         <main className="content">
           <Outlet context={{ openModal, notify, confirm }} />
         </main>
@@ -368,45 +380,15 @@ function AppLayout() {
       )}
       {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} />}
       {pending && (
-        <div className="modal-backdrop" role="presentation">
-          <section
-            className="record-modal confirm-modal"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="confirm-title"
-          >
-            <div className="modal-heading">
-              <div>
-                <h2 id="confirm-title">{pending.title}</h2>
-                <p>{pending.description}</p>
-              </div>
-            </div>
-            {confirmError && (
-              <p className="form-error confirm-error" role="alert">
-                {confirmError}
-              </p>
-            )}
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                data-testid="cancel-confirm"
-                onClick={() => setPending(null)}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="primary-button"
-                data-testid="accept-confirm"
-                disabled={confirmBusy}
-                onClick={runConfirm}
-              >
-                {confirmBusy ? 'Aguarde...' : pending.action}
-              </button>
-            </div>
-          </section>
-        </div>
+        <Confirmacao
+          title={pending.title}
+          description={pending.description}
+          action={pending.action}
+          busy={confirmBusy}
+          error={confirmError}
+          onConfirm={runConfirm}
+          onCancel={() => setPending(null)}
+        />
       )}
     </div>
   )
@@ -534,9 +516,9 @@ function Login() {
               dados fictícios. O login requer a API.
             </p>
           )}
-          <label className="field">
-            <span>Login</span>
-            <input
+          <TextField className="field" name="login" isRequired>
+            <Label>Login</Label>
+            <Input
               data-testid="login-name"
               value={loginName}
               onChange={(event) => setLoginName(event.target.value)}
@@ -544,10 +526,10 @@ function Login() {
               autoComplete="username"
               placeholder="Seu usuário"
             />
-          </label>
-          <label className="field">
-            <span>Senha</span>
-            <input
+          </TextField>
+          <TextField className="field" name="senha" type="password" isRequired>
+            <Label>Senha</Label>
+            <Input
               data-testid="login-password"
               type="password"
               value={password}
@@ -556,21 +538,21 @@ function Login() {
               autoComplete="current-password"
               placeholder="Sua senha"
             />
-          </label>
+          </TextField>
           {error && (
             <p role="alert" className="form-error">
               {error}
             </p>
           )}
-          <button
+          <Button
             type="submit"
             className="primary-button login-submit"
             data-testid="login-submit"
-            disabled={loading}
+            isDisabled={loading}
           >
             {loading ? 'Entrando...' : 'Entrar no sistema'}{' '}
             <ArrowRight size={17} />
-          </button>
+          </Button>
         </form>
         <div className="demo-entry">
           <span>Quer conhecer as telas?</span>
@@ -600,7 +582,13 @@ function Login() {
 }
 
 export function App() {
-  const { session } = useAuth()
+  const { session, restoring } = useAuth()
+  if (restoring)
+    return (
+      <Carregando data-testid="session-restoring">
+        Verificando sua sessão...
+      </Carregando>
+    )
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
