@@ -3,6 +3,7 @@ package com.agrogestao.api.controller.despesa;
 import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.ApiNaoImplementadaException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,8 +53,16 @@ public class DespesaController {
   @Operation(
       summary = "Cadastra despesas",
       description = "Esqueleto F13: responde 501 até a implementação.")
-  @ApiResponse(responseCode = "201", description = "Criado com Location")
-  public DespesaResposta criar(@Valid @RequestBody DespesaRequisicao dto) {
+  @ResponseStatus(HttpStatus.CREATED)
+  @ApiResponse(
+      responseCode = "201",
+      description = "Criado com Location",
+      headers =
+          @Header(
+              name = "Location",
+              description = "URL do recurso criado",
+              schema = @Schema(type = "string", format = "uri")))
+  public ResponseEntity<DespesaResposta> criar(@Valid @RequestBody DespesaRequisicao dto) {
     throw new ApiNaoImplementadaException();
   }
 
@@ -76,6 +85,7 @@ public class DespesaController {
   }
 
   @DeleteMapping("/api/v1/despesas/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(
       summary = "Exclui despesas",
       description = "Esqueleto F13: responde 501 até a implementação.")
@@ -101,8 +111,16 @@ public class DespesaController {
   @Operation(
       summary = "Estorna preservando os rateios e emissões",
       description = "Esqueleto F13: responde 501 até a implementação.")
-  @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
-  public DespesaResposta estornar(@PathVariable Long id) {
+  @ResponseStatus(HttpStatus.CREATED)
+  @ApiResponse(
+      responseCode = "201",
+      description = "Criado com Location",
+      headers =
+          @Header(
+              name = "Location",
+              description = "URL do recurso criado",
+              schema = @Schema(type = "string", format = "uri")))
+  public ResponseEntity<DespesaResposta> estornar(@PathVariable Long id) {
     throw new ApiNaoImplementadaException();
   }
 }

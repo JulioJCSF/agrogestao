@@ -9,9 +9,11 @@ import java.time.*;
 @Schema(
     description = "Resposta do contrato do MVP",
     example =
-        "{\"plantioId\":1,\"tipoCiclo\":\"CURTO\",\"periodoInicio\":\"2026-01-01\",\"periodoFim\":\"2026-06-30\",\"quantidadeProduzida\":250.5,\"quantidadeVendida\":100,\"unidadeMedida\":\"kg\",\"receita\":450,\"custoDesembolso\":100.25,\"valorMaoObraFamiliar\":80,\"custoComMaoObraFamiliar\":180.25,\"resultado\":349.75}")
+        "{\"plantioId\":1,\"culturaNome\":\"Cultura Fictícia\",\"propriedadeNome\":\"Propriedade Fictícia\",\"tipoCiclo\":\"CURTO\",\"periodoInicio\":\"2026-01-01\",\"periodoFim\":\"2026-06-30\",\"quantidadeProduzida\":250.5,\"quantidadeVendida\":100,\"unidadeMedida\":\"kg\",\"receita\":450,\"custoDesembolso\":100.25,\"valorMaoObraFamiliar\":80,\"custoComMaoObraFamiliar\":180.25,\"resultado\":349.75}")
 public record ResultadoPlantioResposta(
     Long plantioId,
+    String culturaNome,
+    String propriedadeNome,
     TipoCiclo tipoCiclo,
     LocalDate periodoInicio,
     LocalDate periodoFim,

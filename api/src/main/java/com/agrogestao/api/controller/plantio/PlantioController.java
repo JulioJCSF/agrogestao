@@ -4,6 +4,7 @@ import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.ApiNaoImplementadaException;
 import com.agrogestao.api.model.SituacaoPlantio;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -55,8 +56,16 @@ public class PlantioController {
   @Operation(
       summary = "Cadastra plantios",
       description = "Esqueleto F13: responde 501 até a implementação.")
-  @ApiResponse(responseCode = "201", description = "Criado com Location")
-  public PlantioResposta criar(@Valid @RequestBody PlantioRequisicao dto) {
+  @ResponseStatus(HttpStatus.CREATED)
+  @ApiResponse(
+      responseCode = "201",
+      description = "Criado com Location",
+      headers =
+          @Header(
+              name = "Location",
+              description = "URL do recurso criado",
+              schema = @Schema(type = "string", format = "uri")))
+  public ResponseEntity<PlantioResposta> criar(@Valid @RequestBody PlantioRequisicao dto) {
     throw new ApiNaoImplementadaException();
   }
 
@@ -82,8 +91,16 @@ public class PlantioController {
   @Operation(
       summary = "Encerra plantio",
       description = "Esqueleto F13: responde 501 até a implementação.")
-  @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
-  public PlantioResposta encerrar(
+  @ResponseStatus(HttpStatus.CREATED)
+  @ApiResponse(
+      responseCode = "201",
+      description = "Criado com Location",
+      headers =
+          @Header(
+              name = "Location",
+              description = "URL do recurso criado",
+              schema = @Schema(type = "string", format = "uri")))
+  public ResponseEntity<PlantioResposta> encerrar(
       @PathVariable Long id, @Valid @RequestBody EncerramentoPlantioRequisicao dto) {
     throw new ApiNaoImplementadaException();
   }
