@@ -3,6 +3,7 @@ package com.agrogestao.api.controller.cultura;
 import com.agrogestao.api.dto.*;
 import com.agrogestao.api.service.cultura.CulturaService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,7 +51,15 @@ public class CulturaController {
 
   @PostMapping("/api/v1/culturas")
   @Operation(summary = "Cria o cadastro")
-  @ApiResponse(responseCode = "201", description = "Criado com Location")
+  @ResponseStatus(HttpStatus.CREATED)
+  @ApiResponse(
+      responseCode = "201",
+      description = "Criado com Location",
+      headers =
+          @Header(
+              name = "Location",
+              description = "URL do recurso criado",
+              schema = @Schema(type = "string", format = "uri")))
   public ResponseEntity<CulturaResposta> criar(@Valid @RequestBody CulturaRequisicao dto) {
     CulturaResposta resposta = service.criar(dto);
     return ResponseEntity.created(URI.create("/api/v1/culturas/" + resposta.id())).body(resposta);

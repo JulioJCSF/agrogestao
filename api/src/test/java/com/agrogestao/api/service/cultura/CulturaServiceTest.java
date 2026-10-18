@@ -32,7 +32,7 @@ class CulturaServiceTest {
 
   @Test
   void deveRejeitarQuandoNomeDuplicarOutroCadastro() {
-    when(repo.existsByNome("Cultura Fictícia")).thenReturn(true);
+    when(repo.existsByNomeIgnoreCase("Cultura Fictícia")).thenReturn(true);
     assertThatThrownBy(() -> service.criar(dto)).isInstanceOf(RegraNegocioException.class);
     verify(repo, never()).saveAndFlush(any());
   }
@@ -44,13 +44,13 @@ class CulturaServiceTest {
     when(repo.findById(1L)).thenReturn(Optional.of(cultura));
     when(repo.saveAndFlush(cultura)).thenReturn(cultura);
     assertThat(service.alterar(1L, dto).nome()).isEqualTo("Cultura Fictícia");
-    verify(repo).existsByNomeAndIdNot("Cultura Fictícia", 1L);
+    verify(repo).existsByNomeIgnoreCaseAndIdNot("Cultura Fictícia", 1L);
   }
 
   @Test
   void deveRejeitarAlteracaoQuandoNomePertencerAOutraCultura() {
     when(repo.findById(1L)).thenReturn(Optional.of(new Cultura()));
-    when(repo.existsByNomeAndIdNot("Cultura Fictícia", 1L)).thenReturn(true);
+    when(repo.existsByNomeIgnoreCaseAndIdNot("Cultura Fictícia", 1L)).thenReturn(true);
     assertThatThrownBy(() -> service.alterar(1L, dto)).isInstanceOf(RegraNegocioException.class);
     verify(repo, never()).saveAndFlush(any());
   }

@@ -3,6 +3,7 @@ package com.agrogestao.api.controller.cliente;
 import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.ApiNaoImplementadaException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,8 +51,16 @@ public class ClienteController {
   @Operation(
       summary = "Cadastra clientes",
       description = "Esqueleto F13: responde 501 até a implementação.")
-  @ApiResponse(responseCode = "201", description = "Criado com Location")
-  public ClienteResposta criar(@Valid @RequestBody ClienteRequisicao dto) {
+  @ResponseStatus(HttpStatus.CREATED)
+  @ApiResponse(
+      responseCode = "201",
+      description = "Criado com Location",
+      headers =
+          @Header(
+              name = "Location",
+              description = "URL do recurso criado",
+              schema = @Schema(type = "string", format = "uri")))
+  public ResponseEntity<ClienteResposta> criar(@Valid @RequestBody ClienteRequisicao dto) {
     throw new ApiNaoImplementadaException();
   }
 

@@ -50,8 +50,8 @@ public class CulturaService {
 
   private void validarNome(String nome, Long id) {
     if (id == null
-        ? culturaRepository.existsByNome(nome)
-        : culturaRepository.existsByNomeAndIdNot(nome, id))
+        ? culturaRepository.existsByNomeIgnoreCase(nome)
+        : culturaRepository.existsByNomeIgnoreCaseAndIdNot(nome, id))
       throw new RegraNegocioException("Já existe uma cultura com este nome.");
   }
 

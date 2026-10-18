@@ -10,7 +10,7 @@ import java.util.List;
 @Schema(
     description = "Resposta do contrato do MVP",
     example =
-        "{\"id\":1,\"produtorId\":1,\"categoriaDespesaId\":2,\"diariaId\":null,\"descricao\":\"Despesa Fictícia\",\"valorTotal\":100.25,\"dataFato\":\"2026-03-01\",\"dataColeta\":\"2026-03-02\",\"estornada\":null,\"rateios\":[{\"plantioId\":1,\"percentual\":1,\"valorRateado\":100.25}]}")
+        "{\"id\":1,\"produtorId\":1,\"categoriaDespesaId\":2,\"diariaId\":null,\"descricao\":\"Despesa Fictícia\",\"valorTotal\":100.25,\"dataFato\":\"2026-03-01\",\"dataColeta\":\"2026-03-02\",\"estornada\":false,\"rateios\":[{\"plantioId\":1,\"percentual\":1,\"valorRateado\":100.25}]}")
 public record DespesaResposta(
     Long id,
     Long produtorId,
