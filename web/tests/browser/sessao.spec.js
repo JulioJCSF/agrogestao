@@ -10,8 +10,14 @@ class LoginPage {
     await this.page.goto('/login')
   }
   async logar(login = 'operador-ficticio', senha = 'senha-sintetica') {
-    await this.campo('login-name').fill(login)
-    await this.campo('login-password').fill(senha)
+    for (const [id, value] of [
+      ['login-name', login],
+      ['login-password', senha],
+    ]) {
+      await this.campo(id).press('ControlOrMeta+A')
+      await this.campo(id).press('Backspace')
+      await this.campo(id).pressSequentially(value)
+    }
     await this.campo('login-submit').click()
   }
   async sair() {
@@ -130,8 +136,16 @@ test('login, Bearer, catálogo e erro usam a API real com mock desligado', async
     process.env.AGROGESTAO_TEST_SENHA,
   )
   await expect(tela.campo('profile-menu')).toContainText('Administrador')
+  const nome = `Cultura Fictícia Navegador ${crypto.randomUUID()}`
+  const sessaoCriada = await tela.sessao()
+  const created = await page.request.post('/api/v1/culturas', {
+    headers: { Authorization: `Bearer ${sessaoCriada.token}` },
+    data: { nome, tipoCicloPadrao: 'CURTO', unidadeMedida: 'kg' },
+  })
+  expect(created.status()).toBe(201)
+  const cultura = await created.json()
   await page.goto('/configuracoes')
-  await expect(tela.campo('culture-row-1')).toBeVisible()
+  await expect(tela.campo(`culture-row-${cultura.id}`)).toContainText(nome)
   const sessao = await tela.sessao()
   expect(
     requests.some(
@@ -145,4 +159,43 @@ test('login, Bearer, catálogo e erro usam a API real com mock desligado', async
     path: 'test-results/login-api-real.png',
     fullPage: true,
   })
+})
+
+test('erro de conexão aparece em português', async ({ page }) => {
+  await page.route('**/api/v1/auth/login', (route) => route.abort('failed'))
+  const tela = new LoginPage(page)
+  await tela.abrir()
+  await tela.logar()
+  await expect(page.getByRole('alert')).toHaveText(
+    'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.',
+  )
+})
+
+test('percentual do rateio é exibido em pt-BR com duas casas', async ({
+  page,
+}) => {
+  await apiFicticia(page, 'LANCAMENTO')
+  const despesa = {
+    id: 731,
+    produtorId: 811,
+    categoriaDespesaId: 912,
+    descricao: 'Despesa Fictícia Percentual',
+    valorTotal: 7,
+    dataFato: '2026-02-01',
+    rateios: [{ plantioId: 622, percentual: 0.142857, valorRateado: 1 }],
+  }
+  await page.route('**/api/v1/despesas?**', (route) =>
+    route.fulfill({
+      json: { itens: [despesa], pagina: 0, tamanho: 100, total: 1 },
+    }),
+  )
+  const tela = new LoginPage(page)
+  await tela.abrir()
+  await tela.logar()
+  await page.goto('/financeiro')
+  await tela.campo(`expense-allocation-${despesa.id}`).click()
+  await expect(tela.campo(`expense-row-${despesa.id}`)).toContainText('14,29%')
+  await expect(tela.campo(`expense-row-${despesa.id}`)).not.toContainText(
+    '14.2857',
+  )
 })

@@ -9,7 +9,64 @@ try {
   const { toApi, fromApi, campoDoFormulario, salvarRegistro } =
     await server.ssrLoadModule('/src/services/registroService.js')
   const { api } = await server.ssrLoadModule('/src/services/api.js')
+  const { readCurrency, displayCurrency } = await server.ssrLoadModule(
+    '/src/components/formularioValores.js',
+  )
   globalThis.sessionStorage = { getItem: () => null, removeItem() {} }
+  test('moeda normaliza zeros e mantém precisão decimal', () => {
+    assert.equal(readCurrency('0'), '')
+    assert.equal(readCurrency('000'), '')
+    assert.equal(displayCurrency(readCurrency('000512')), 'R$ 5,12')
+    assert.equal(readCurrency('900719925474099312'), '9007199254740993.12')
+  })
+  test('erros sem resposta usam mensagens em português e preservam erros da API', async () => {
+    const originalAdapter = api.defaults.adapter
+    try {
+      for (const [code, message, expected] of [
+        [
+          'ERR_NETWORK',
+          'Network Error',
+          'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.',
+        ],
+        [
+          'ECONNABORTED',
+          'timeout of 12000ms exceeded',
+          'A conexão demorou mais que o esperado. Tente novamente.',
+        ],
+        [
+          'ETIMEDOUT',
+          'timeout of 12000ms exceeded',
+          'A conexão demorou mais que o esperado. Tente novamente.',
+        ],
+      ]) {
+        api.defaults.adapter = async () => {
+          throw Object.assign(new Error(message), { code })
+        }
+        await assert.rejects(api.get('/culturas'), { message: expected })
+      }
+      api.defaults.adapter = async () => {
+        throw {
+          response: {
+            status: 422,
+            data: {
+              mensagem: 'Nome já cadastrado.',
+              campos: [{ campo: 'nome', mensagem: 'Duplicado.' }],
+            },
+          },
+        }
+      }
+      await assert.rejects(api.get('/culturas'), (error) => {
+        assert.equal(error.message, 'Nome já cadastrado.')
+        assert.equal(error.status, 422)
+        assert.deepEqual(error.campos, [
+          { campo: 'nome', mensagem: 'Duplicado.' },
+        ])
+        return true
+      })
+    } finally {
+      api.defaults.adapter = originalAdapter
+    }
+  })
   test('contratos usam campo monetário do domínio sem confundir quantidade', () => {
     assert.deepEqual(
       toApi('expenses', {

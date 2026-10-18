@@ -96,7 +96,7 @@ export function Confirmacao({
           <button
             type="button"
             className="secondary-button"
-            data-testid="cancel-confirm"
+            data-testid={`${testId}-cancelar`}
             disabled={busy}
             onClick={onCancel}
           >
@@ -105,7 +105,7 @@ export function Confirmacao({
           <button
             type="button"
             className="primary-button"
-            data-testid="accept-confirm"
+            data-testid={`${testId}-confirmar`}
             disabled={busy}
             onClick={onConfirm}
           >

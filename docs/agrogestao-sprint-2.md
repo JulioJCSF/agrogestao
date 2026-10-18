@@ -14,6 +14,13 @@ Data: 12/10/2026. Entrega dividida em cinco PRs; o PR agregado #111 foi substitu
 
 Os PRs dependentes usam a branch anterior como base para mostrar somente seu grupo de mudanças. Antes de integrar um PR dependente, atualize sua base para `develop` após o merge da dependência e confira o diff. Como o projeto usa squash, atualize também a branch dependente para retirar os commits já integrados. A massa dev pode seguir após a fundação; o front segue após os cadastros. Cada commit e PR mantém a autoria do solicitante.
 
+## Revisão de 18/10/2026
+
+- #113: nomes de cultura/propriedade no snapshot, POST com 201 e Location, DELETE com 204, exemplos corrigidos e seção 2.4 limitada ao contrato. A base do PR passa para `develop`, que já recebeu #112 e #115.
+- #114: unicidade sem diferenciar maiúsculas nos services, rejeição explícita de categoria em uso e testes com fixtures próprias e casos negativos. Nenhuma migration foi alterada ou criada; o índice case-insensitive no banco continua sujeito à decisão do grupo.
+- #116: moeda sem zeros à esquerda, percentual em pt-BR, erros de conexão/timeout em português, testids derivados na confirmação e testes com digitação sequencial e cultura criada pelo próprio teste. O banco temporário do teste real é descartado pelo runner ao terminar.
+- Área total da propriedade e confirmação da prioridade da RF22 não foram decididas nesta revisão. A revisão de uma pessoa do front para F13 permanece necessária.
+
 ## Escopo
 
 | Issue | Entrega | Situação |
@@ -50,11 +57,11 @@ Não é possível afirmar que a carga antiga está isolada em dev enquanto ela p
 
 ## Verificação
 
-- `api/mvnw verify`: 67 testes unitários e 25 de integração, sem falhas; Spotless e build aprovados.
+- `api/mvnw verify`: 67 testes unitários e 34 de integração na API completa revisada, sem falhas; Spotless e build aprovados. Na etapa do contrato (#113): 52 unitários e 22 de integração.
 - `npm run lint` e `npm run build`: aprovados com Node 22.
 - `npm run smoke`: rotas do protótipo e prévia somente leitura.
-- `npm run test:contrato`: 3 testes dos adaptadores, decimais, enums, erros por campo e URLs aninhadas.
-- `npm run test:api-real`: 10 testes de navegador aprovados, incluindo login/Bearer contra API real, restauração, logout, 401, CONSULTA, campos e confirmação.
+- `npm run test:contrato`: 5 testes dos adaptadores, decimais, enums, erros por campo, URLs aninhadas, moeda e mensagens de rede/timeout.
+- `npm run test:api-real`: 13 testes de navegador aprovados, incluindo login/Bearer contra API real, restauração, logout, 401, CONSULTA, campos, confirmação, digitação sequencial, percentual e erro de conexão.
 - Os bancos de verificação são temporários, com dados sintéticos. O banco do Compose não é usado.
 
 Comandos e pré-requisitos no [README](../README.md). Detalhes de contrato na [seção 2.4](agrogestao-fase-2-padroes-tecnicos.md#24-padrão-de-api).

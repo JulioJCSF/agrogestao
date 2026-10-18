@@ -120,6 +120,7 @@ function Exemplos() {
       </button>
       {pending && (
         <Confirmacao
+          data-testid="example-confirmation"
           title="Excluir registro?"
           description="Confirme a exclusão."
           onCancel={() => setPending(false)}

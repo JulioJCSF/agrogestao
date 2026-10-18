@@ -14,8 +14,9 @@ export function displayCurrency(value) {
 }
 export function readCurrency(value) {
   const digits = value.replace(/\D/g, '')
-  if (!digits) return ''
-  return `${digits.slice(0, -2) || '0'}.${digits.slice(-2).padStart(2, '0')}`
+  if (!digits || /^0+$/.test(digits)) return ''
+  const integer = String(BigInt(digits.slice(0, -2) || '0'))
+  return `${integer}.${digits.slice(-2).padStart(2, '0')}`
 }
 export function displayDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value || '')

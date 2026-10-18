@@ -9,10 +9,16 @@ class ExemplosPage {
   async abrir() {
     await this.page.goto('/tests/components.html')
   }
+  async digitar(id, value) {
+    const field = this.campo(id)
+    await field.press('ControlOrMeta+A')
+    await field.press('Backspace')
+    await field.pressSequentially(value)
+  }
   async preencher() {
-    await this.campo('example-money').fill('10025')
-    await this.campo('example-date').fill('29/02/2024')
-    await this.campo('example-cpf').fill('99900000188')
+    await this.digitar('example-money', '10025')
+    await this.digitar('example-date', '29/02/2024')
+    await this.digitar('example-cpf', '99900000188')
   }
 }
 test('máscaras preservam valores decimais, CPF e data de calendário', async ({
@@ -35,10 +41,10 @@ test('data inexistente impede envio e correção permite enviar', async ({
   const tela = new ExemplosPage(page)
   await tela.abrir()
   await tela.preencher()
-  await tela.campo('example-date').fill('31/02/2024')
+  await tela.digitar('example-date', '31/02/2024')
   await tela.campo('example-submit').click()
   await expect(tela.campo('example-submitted')).toBeEmpty()
-  await tela.campo('example-date').fill('28/02/2024')
+  await tela.digitar('example-date', '28/02/2024')
   await tela.campo('example-submit').click()
   await expect(tela.campo('example-submitted')).toContainText('2024-02-28')
 })
@@ -71,7 +77,7 @@ test('tabela usa paginação de base zero, busca, vazio e carregamento', async (
   await expect(tela.campo('example-table-linha-1')).toBeVisible()
   await tela.campo('example-table-proxima').click()
   await expect(tela.campo('example-table-linha-11')).toBeVisible()
-  await tela.campo('example-table-busca').fill('nenhum')
+  await tela.digitar('example-table-busca', 'nenhum')
   await expect(tela.campo('example-table-vazio')).toBeVisible()
   await expect(tela.campo('example-table-proxima')).toBeDisabled()
   await tela.campo('example-loading').click()
@@ -85,11 +91,28 @@ test('confirmação cancela com Escape, restaura foco e confirma uma vez', async
   const tela = new ExemplosPage(page)
   await tela.abrir()
   await tela.campo('example-confirm').click()
-  await expect(tela.campo('cancel-confirm')).toBeFocused()
+  await expect(tela.campo('example-confirmation-cancelar')).toBeFocused()
   await page.keyboard.press('Escape')
-  await expect(tela.campo('confirmacao')).toHaveCount(0)
+  await expect(tela.campo('example-confirmation')).toHaveCount(0)
   await expect(tela.campo('example-confirm')).toBeFocused()
   await tela.campo('example-confirm').click()
-  await tela.campo('accept-confirm').click()
+  await tela.campo('example-confirmation-confirmar').click()
   await expect(tela.campo('example-confirmed')).toHaveText('Confirmado')
+})
+
+test('moeda remove zeros à esquerda, permite apagar e redigitar', async ({
+  page,
+}) => {
+  const tela = new ExemplosPage(page)
+  await tela.abrir()
+  await tela.digitar('example-money', '0512')
+  await expect(tela.campo('example-money')).toHaveValue('R$ 5,12')
+  await tela.digitar('example-money', '0')
+  await expect(tela.campo('example-money')).toHaveValue('')
+  await tela.digitar('example-money', '5')
+  await expect(tela.campo('example-money')).toHaveValue('R$ 0,05')
+  await tela.campo('example-money').press('Backspace')
+  await expect(tela.campo('example-money')).toHaveValue('')
+  await tela.campo('example-money').pressSequentially('512')
+  await expect(tela.campo('example-money')).toHaveValue('R$ 5,12')
 })

@@ -23,8 +23,11 @@ api.interceptors.response.use(
     }
     const message =
       error.response?.data?.mensagem ||
-      error.message ||
-      'Não foi possível concluir a operação.'
+      (!error.response
+        ? error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT'
+          ? 'A conexão demorou mais que o esperado. Tente novamente.'
+          : 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.'
+        : 'Não foi possível concluir a operação.')
     const normalized = new Error(message)
     normalized.status = error.response?.status
     normalized.erro = error.response?.data?.erro

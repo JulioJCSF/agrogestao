@@ -21,6 +21,8 @@ import {
   Tabs,
 } from '../../components/ui.jsx'
 
+const percentual = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
+
 export function Financeiro() {
   const { data } = useData()
   const [params, setParams] = useSearchParams()
@@ -150,7 +152,8 @@ export function Financeiro() {
                                 data,
                                 byId(data.plantings, part.plantingId),
                               )}
-                              : {part.percent}% · {money(part.amount)}
+                              : {percentual.format(part.percent)}% ·{' '}
+                              {money(part.amount)}
                             </div>
                           ))}
                         </div>
