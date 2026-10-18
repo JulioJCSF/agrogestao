@@ -222,6 +222,16 @@ Só o login e o próprio Swagger são públicos; os demais endpoints exigem toke
 
 O token vale `JWT_EXPIRACAO_MINUTOS` (60 por padrão). Quando expirar, a API responde 401 e é preciso logar de novo.
 
+### Perfil dev e massa sintética
+
+A partir de `api/`: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` (PowerShell: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"`).
+
+O perfil `dev` carrega `db/dev/dados-sinteticos.sql` depois das migrations, com um inicializador idempotente: três produtores claramente fictícios, CPFs gerados com dígitos verificadores, propriedades e plantios do catálogo. O perfil padrão e os testes comuns não executam esse inicializador.
+
+**Limitação da F12 (#86):** a migration antiga `V20261005_1020` já contém exemplos, usuários de exemplo e referências em todos os perfis. Ela foi preservada conforme orientação desta entrega. A massa adicional fica em `dev`; a separação integral da carga antiga ainda exige decisão, e #86 permanece aberta. Não há nova migration nem alteração de checksum.
+
+Para zerar somente o banco local de desenvolvimento, pare a API e execute `docker compose down -v` na raiz, depois `docker compose up -d db`. O comando apaga o volume local e todos os registros nele.
+
 ### Testes da API
 
 A partir de `api/`:
