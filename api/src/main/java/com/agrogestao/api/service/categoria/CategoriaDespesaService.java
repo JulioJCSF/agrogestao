@@ -4,6 +4,7 @@ import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.CategoriaDespesa;
 import com.agrogestao.api.repository.CategoriaDespesaRepository;
+import com.agrogestao.api.repository.DespesaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CategoriaDespesaService {
   private final CategoriaDespesaRepository categoriaDespesaRepository;
+  private final DespesaRepository despesaRepository;
 
   public PaginaResposta<CategoriaDespesaResposta> listar(String busca, PaginacaoConsulta consulta) {
     return PaginaResposta.de(
@@ -46,6 +48,9 @@ public class CategoriaDespesaService {
   public void excluir(Long id) {
     CategoriaDespesa entidade = encontrar(id);
     validarEditavel(entidade);
+    if (despesaRepository.existsByCategoriaDespesaId(id))
+      throw new RegraNegocioException(
+          "Esta categoria já foi usada em despesas e não pode ser excluída.");
     categoriaDespesaRepository.delete(entidade);
     categoriaDespesaRepository.flush();
   }
@@ -59,8 +64,8 @@ public class CategoriaDespesaService {
 
   private void validarNome(String nome, Long id) {
     if (id == null
-        ? categoriaDespesaRepository.existsByNome(nome)
-        : categoriaDespesaRepository.existsByNomeAndIdNot(nome, id))
+        ? categoriaDespesaRepository.existsByNomeIgnoreCase(nome)
+        : categoriaDespesaRepository.existsByNomeIgnoreCaseAndIdNot(nome, id))
       throw new RegraNegocioException("Já existe uma categoria com este nome.");
   }
 

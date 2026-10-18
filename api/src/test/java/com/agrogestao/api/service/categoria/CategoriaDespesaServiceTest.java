@@ -13,7 +13,8 @@ import org.springframework.data.domain.*;
 
 class CategoriaDespesaServiceTest {
   CategoriaDespesaRepository repo = mock(CategoriaDespesaRepository.class);
-  CategoriaDespesaService service = new CategoriaDespesaService(repo);
+  DespesaRepository despesas = mock(DespesaRepository.class);
+  CategoriaDespesaService service = new CategoriaDespesaService(repo, despesas);
 
   @Test
   void deveCriarCategoriaManualQuandoNomeForNovo() {
@@ -24,7 +25,7 @@ class CategoriaDespesaServiceTest {
 
   @Test
   void deveRejeitarQuandoNomeDuplicado() {
-    when(repo.existsByNome("Diária")).thenReturn(true);
+    when(repo.existsByNomeIgnoreCase("Diária")).thenReturn(true);
     assertThatThrownBy(() -> service.criar(new CategoriaDespesaRequisicao("Diária")))
         .isInstanceOf(RegraNegocioException.class);
   }
@@ -48,6 +49,17 @@ class CategoriaDespesaServiceTest {
     service.excluir(2L);
     verify(repo).delete(c);
     verify(repo).flush();
+  }
+
+  @Test
+  void deveRejeitarExclusaoQuandoCategoriaEstiverEmUso() {
+    when(repo.findById(2L)).thenReturn(Optional.of(new CategoriaDespesa()));
+    when(despesas.existsByCategoriaDespesaId(2L)).thenReturn(true);
+    assertThatThrownBy(() -> service.excluir(2L))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage("Esta categoria já foi usada em despesas e não pode ser excluída.");
+    verify(repo, never()).delete(any());
+    verify(repo, never()).flush();
   }
 
   @Test
