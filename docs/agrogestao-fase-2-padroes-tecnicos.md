@@ -1,6 +1,6 @@
 # AgroGestão — Fase 2: Arquitetura e Padrões Técnicos
 
-Versão 1.6
+Versão 1.7
 
 Define as decisões técnicas e convenções do projeto. Documento de referência: consultado sempre que alguém abre um PR, cria uma migration ou nomeia um endpoint.
 
@@ -200,13 +200,48 @@ PUT    /api/v1/produtores/{id}
 DELETE /api/v1/produtores/{id}
 
 GET    /api/v1/plantios?produtorId={id}
-POST   /api/v1/plantios/{id}/despesas
+POST   /api/v1/despesas
 GET    /api/v1/plantios/{id}/resultado
 ```
 
 Recurso aninhado só quando o filho não existe sem o pai. Produtor existe sozinho, então não aninha.
 
-> **Pendente (P17):** o exemplo `POST /api/v1/plantios/{id}/despesas` não comporta despesa vinculada a vários plantios (RF19, RN06) nem a `despesa.produtor_id` do DER — a despesa pertence ao produtor e alcança um ou mais plantios pelo rateio. O contrato de despesa é definido na F13 (esqueleto da API) e registrado aqui; até lá, não implementar a partir deste exemplo.
+**Contrato F13 (P17):** despesa pertence ao produtor e alcança vários plantios pelo rateio. Usa `POST /api/v1/despesas` com `produtorId`, `categoriaDespesaId`, `descricao`, `valorTotal`, `dataFato` e `plantioIds`. A resposta traz `rateios` com `plantioId`, `percentual` (fração em 6 casas) e `valorRateado`. `GET /plantios/{plantioId}/despesas` devolve o valor rateado àquele plantio. Uma lista vazia de plantios é tratada pelo serviço (422, RN06), conforme Q00b; os itens da lista têm validação de formato.
+
+### Paginação e formatos
+
+Todas as listas do contrato usam:
+
+```json
+{"itens": [], "pagina": 0, "tamanho": 20, "total": 0}
+```
+
+`pagina` começa em zero; `tamanho` padrão 20, permitido de 1 a 100. Ordenação determinística por id. Valores fora dos limites respondem 400 `VALIDACAO`. Busca textual usa `busca`; filtros de intervalo usam `periodoInicio` e `periodoFim`. Datas são `AAAA-MM-DD`; instantes são ISO-8601 em UTC. O front exibe datas em dd/mm/aaaa. CPF usa `documento` com 11 dígitos; dinheiro usa número decimal no JSON e BigDecimal no Java.
+
+Essa paginação e as assinaturas compõem a proposta técnica da F13; revisão de uma pessoa do front é necessária antes do merge.
+
+### Contratos por módulo
+
+| Módulo | Endpoints principais |
+|---|---|
+| Autenticação | POST /auth/login; GET /auth/me |
+| Produtores | GET/POST /produtores; GET/PUT/DELETE /produtores/{id} |
+| Propriedades | GET/POST /produtores/{produtorId}/propriedades; GET/PUT /propriedades/{id} |
+| Culturas | GET/POST /culturas; GET/PUT /culturas/{id} |
+| Plantios | GET/POST /plantios; GET/PUT /plantios/{id}; POST /plantios/{id}/encerramento |
+| Produção | GET/POST /plantios/{plantioId}/producoes; GET/PUT/DELETE /producoes/{id} |
+| Categorias | GET/POST /categorias-despesa; GET/PUT/DELETE /categorias-despesa/{id} |
+| Despesas | GET/POST /despesas; GET/PUT/DELETE /despesas/{id}; POST /despesas/{id}/estorno; GET /plantios/{plantioId}/despesas |
+| Referência de diária | GET/POST /valores-referencia-diaria; GET/PUT /valores-referencia-diaria/{id}; GET /valores-referencia-diaria/vigente?dataFato=... |
+| Diárias | GET/POST /plantios/{plantioId}/diarias; GET/PUT/DELETE /diarias/{id} |
+| Clientes e vendas | GET/POST /clientes e /vendas; GET/PUT /clientes/{id}; GET/PUT/DELETE /vendas/{id} |
+| Resultado | GET /plantios/{id}/resultado?mes=AAAA-MM |
+| Relatórios | POST /relatorios; GET /produtores/{produtorId}/relatorios; GET /relatorios/{id} |
+| Usuários | GET/POST /usuarios; PUT /usuarios/{id} |
+| Complementos | GET /plantios/{id}/saldo; GET /painel |
+Todos os caminhos da tabela têm prefixo `/api/v1`. Os DTOs e exemplos concretos são gerados do código no Swagger; ele é a referência completa de campos e parâmetros.
+
+A emissão não aceita conteúdo apurado do cliente. O conteúdo de resposta inclui produtor, propriedades, resultados por plantio, despesas, diárias e ambas as ressalvas. O histórico lê a emissão gravada. POST de domínio responde 201 com `Location`, inclusive encerramento e estorno; o POST de autenticação responde 200. Encerramento e emissão usam POST; estorno preserva o registro. O resultado de cada plantio no conteúdo gravado inclui `culturaNome` e `propriedadeNome`, preservados como snapshot junto aos valores apurados (RN31 e RN34). Essas assinaturas não antecipam as decisões de negócio ainda pendentes em A01/A03a/L09b (período de safra, efeito do estorno e venda sem produção).
 
 ### Códigos de status
 
@@ -221,6 +256,7 @@ Recurso aninhado só quando o filho não existe sem o pai. Produtor existe sozin
 | Recurso inexistente | 404 |
 | Violação de regra de negócio | 422 |
 | Erro não tratado | 500 |
+| Endpoint com contrato publicado e implementação pendente | 501 |
 
 A distinção entre 400 e 422 importa: 400 é formato inválido (data em texto livre), 422 é regra violada (despesa lançada em plantio já encerrado).
 
@@ -235,7 +271,7 @@ Resposta única para todo erro, para o front tratar em um lugar só:
   "erro": "REGRA_NEGOCIO",
   "mensagem": "Não é possível lançar despesa em plantio encerrado.",
   "campos": [
-    { "campo": "dataDespesa", "mensagem": "Data posterior ao encerramento do plantio." }
+    { "campo": "dataFato", "mensagem": "Data posterior ao encerramento do plantio." }
   ]
 }
 ```
@@ -254,6 +290,7 @@ Códigos do campo `erro`:
 | `NAO_ENCONTRADO` | 404 | `RecursoNaoEncontradoException` ou rota inexistente |
 | `REGRA_NEGOCIO` | 422 | `RegraNegocioException`. Violação de constraint do banco também cai aqui, com mensagem genérica; o detalhe técnico vai só para o log |
 | `ERRO_INTERNO` | 500 | Erro não tratado. Sem stack trace na resposta; o detalhe vai para o log |
+| `NAO_IMPLEMENTADO` | 501 | Esqueleto da F13, via ApiNaoImplementadaException e o mesmo advice |
 
 Tratamento centralizado com `@RestControllerAdvice` (`exception/ApiExceptionHandler`). Nenhum `try/catch` devolvendo erro direto no Controller. Para sinalizar erro, o Service lança `RegraNegocioException` ou `RecursoNaoEncontradoException` com a mensagem para o operador. Os 401 e 403 do Spring Security saem no mesmo formato pelo entry point e pelo access denied handler configurados em `SecurityConfig`.
 
@@ -379,7 +416,7 @@ O PR de entrega, da `develop` para a `master`, usa merge commit, para que a `mas
 | P08 | Definir pipeline de CI (build e linter no PR) | Não — regra 5 do PR depende dela para ser automática |
 | P09 | Docker Compose do banco, Flyway e hot-reload local | **Fechada** — banco e Flyway no PR #11; DevTools e README neste PR (ADR-0009) |
 | P16 | Inicializar o projeto React com Vite em `web/` | Sim — hoje há apenas um `index.html` |
-| P17 | Contrato de despesa em vários plantios: substituir o exemplo `POST /plantios/{id}/despesas` da 2.4 (RF19, `despesa.produtor_id`) | Sim, a API de despesa — resolvida na F13 |
+| P17 | Contrato de despesa em vários plantios: substituir o exemplo `POST /plantios/{id}/despesas` da 2.4 (RF19, `despesa.produtor_id`) | Contrato definido na F13; implementação de despesa permanece na L04a/L04b |
 
 O projeto Spring já foi criado e commitado em `api/`, com pacote base `com.agrogestao.api`. Banco e migrations já sobem pelo Docker Compose; o hot-reload é nativo, pelo DevTools no back-end e pelo HMR do Vite no front-end (ADR-0009).
 
