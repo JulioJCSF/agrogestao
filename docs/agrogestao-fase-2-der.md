@@ -94,7 +94,9 @@ CREATE INDEX idx_produtor_nome ON produtor (nome);
 
 `consentimento_em` nulo significa consentimento não registrado. A `RN37` bloqueia emissão de relatório nesse caso, não o lançamento.
 
-`ativo` sustenta a `RF09`: produtor com lançamentos é inativado, nunca excluído.
+`ativo` sustenta a `RF09`: produtor com lançamentos é inativado, nunca excluído. A exclusão também é recusada (422, orientando inativar) quando há propriedade ou relatório emitido, mesmo sem lançamento; só sai do banco o produtor sem nenhum vínculo.
+
+`consentimento_em` não aceita data futura. Pode ser corrigido ou voltar a nulo pela alteração do cadastro.
 
 `documento` é o CPF, armazenado apenas com os dígitos, sem máscara. A formatação é responsabilidade da interface.
 
