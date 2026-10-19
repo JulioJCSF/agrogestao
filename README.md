@@ -113,7 +113,7 @@ Abra o endereço mostrado pelo Vite. Na tela de login, **Explorar prévia com da
 
 Para usar a prévia estática, copie `web/.env.example` para `web/.env.local` e inicie o Vite. Com `VITE_USAR_MOCK=true`, o botão **Explorar prévia** mostra inclusive a interface de administração, sem autenticar ninguém. Para solicitar dados reais, use `VITE_USAR_MOCK=false` e reinicie o Vite. O login e as operações reais dependem da API; as telas usam `web/src/services/registroService.js`, e o cliente Axios usa `/api/v1`, com proxy local para `http://localhost:8080`.
 
-O contrato do MVP está publicado no Swagger pela F13: DTOs, exemplos, paginação e endpoints. O login tem implementação real; os demais endpoints respondem `501 NAO_IMPLEMENTADO` até as issues dos respectivos módulos. A integração dos adaptadores do front está em PR separado. Cálculos de resultado, saldo, rateio, relatório e regras de acesso pertencem à API; os números da prévia são exemplos estáticos. Para verificar o front-end, rode `npm run build`, `npm run lint` e `npm run smoke` dentro de `web/`.
+O contrato do MVP está publicado no Swagger pela F13: DTOs, exemplos, paginação e endpoints. Login, propriedades, culturas e categorias de despesa têm implementação real; os demais módulos respondem `501 NAO_IMPLEMENTADO` até suas próprias issues. O front usa os nomes e URLs desse contrato e mostra a indisponibilidade sem substituir uma sessão real pela prévia. Cálculos de resultado, saldo, rateio e relatório pertencem à API. Os números da prévia são exemplos estáticos.
 
 ## Documentação do projeto
 
@@ -244,6 +244,28 @@ A partir de `api/`:
 No PowerShell, use `.\mvnw.cmd` e coloque parâmetros `-D` entre aspas.
 
 Surefire executa classes `*Test`; Failsafe executa `*IT` no `verify`. A base `IntegracaoTest` importa `PostgresTesteConfig`, usa `@ServiceConnection` e a imagem `postgres:17-alpine`. O perfil `test` define os placeholders sintéticos do admin e ignora o `.env`. Os testes não alteram o banco local.
+
+### Verificar o front-end
+
+Em `web/`, com Node 22:
+
+```bash
+npm ci
+npm run lint
+npm run build
+npm run smoke
+npm run test:contrato
+npx playwright install chromium
+npm test
+```
+
+Para usar o Chrome já instalado no Windows, defina `$env:PLAYWRIGHT_CHANNEL='chrome'` antes de `npm test`.
+
+`npm run test:api-real` verifica o login e o Bearer no navegador contra a API real, com `VITE_USAR_MOCK=false`. Antes, gere o JAR com `./mvnw verify`. O comando cria PostgreSQL temporário sem volume, gera credenciais sintéticas, sobe a API na porta 18080 e encerra ambos ao terminar. O log fica em `api/target/browser-api.log`. O teste não usa o banco do Compose nem dados reais.
+
+A página de exemplo dos componentes está em `/tests/components.html` durante o desenvolvimento. Ela não aparece no menu e não é incluída no build de produção. Os componentes reutilizáveis estão em `web/src/components/`.
+
+As issues com label `qa` (#32, #46, #57) e a validação com o sindicato (#36) foram excluídas do escopo por orientação. Veja [o registro da sprint 2](docs/agrogestao-sprint-2.md).
 
 ### Conflito na porta 5432
 
