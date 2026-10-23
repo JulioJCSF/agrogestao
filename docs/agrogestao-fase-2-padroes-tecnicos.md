@@ -413,7 +413,7 @@ O PR de entrega, da `develop` para a `master`, usa merge commit, para que a `mas
 |---|---|---|
 | P06 | Redigir as ADRs 0001 a 0007 | Não |
 | P07 | Configurar Spotless, ESLint e Prettier no repositório | Não, mas quanto antes menos retrabalho de formatação — Spotless configurado na F09; ESLint e Prettier pendentes |
-| P08 | Definir pipeline de CI (build e linter no PR) | Não — regra 5 do PR depende dela para ser automática |
+| P08 | Definir pipeline de CI (build e linter no PR) | **Fechada** — workflow de CI na F08 (#32); Playwright de API entra na Q07 |
 | P09 | Docker Compose do banco, Flyway e hot-reload local | **Fechada** — banco e Flyway no PR #11; DevTools e README neste PR (ADR-0009) |
 | P16 | Inicializar o projeto React com Vite em `web/` | Sim — hoje há apenas um `index.html` |
 | P17 | Contrato de despesa em vários plantios: substituir o exemplo `POST /plantios/{id}/despesas` da 2.4 (RF19, `despesa.produtor_id`) | Contrato definido na F13; implementação de despesa permanece na L04a/L04b |
