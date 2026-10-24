@@ -3,12 +3,14 @@ package com.agrogestao.api.controller.plantio;
 import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.ApiNaoImplementadaException;
 import com.agrogestao.api.model.SituacaoPlantio;
+import com.agrogestao.api.service.plantio.PlantioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.time.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -31,16 +33,17 @@ import org.springframework.web.bind.annotation.*;
       description = "Regra de negócio",
       content = @Content(schema = @Schema(implementation = ErroResposta.class))),
   @ApiResponse(
-      responseCode = "501",
-      description = "Contrato publicado; implementação em sprint posterior",
+      responseCode = "404",
+      description = "Recurso inexistente",
       content = @Content(schema = @Schema(implementation = ErroResposta.class)))
 })
 public class PlantioController {
+  private final PlantioService service;
 
   @GetMapping("/api/v1/plantios")
   @Operation(
       summary = "Lista plantios",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description = "Filtra data de início com limites inclusivos; filtros podem ser combinados.")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public PaginaResposta<PlantioResposta> listar(
       @RequestParam(required = false) Long produtorId,
@@ -49,13 +52,14 @@ public class PlantioController {
       @RequestParam(required = false) LocalDate periodoInicio,
       @RequestParam(required = false) LocalDate periodoFim,
       @Valid @ModelAttribute PaginacaoConsulta consulta) {
-    throw new ApiNaoImplementadaException();
+    return service.listar(produtorId, culturaId, situacao, periodoInicio, periodoFim, consulta);
   }
 
   @PostMapping("/api/v1/plantios")
   @Operation(
-      summary = "Cadastra plantios",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      summary = "Cadastra plantio",
+      description =
+          "Tipo de ciclo omitido usa o padrão da cultura. Área positiva e início não futuro.")
   @ResponseStatus(HttpStatus.CREATED)
   @ApiResponse(
       responseCode = "201",
@@ -66,27 +70,30 @@ public class PlantioController {
               description = "URL do recurso criado",
               schema = @Schema(type = "string", format = "uri")))
   public ResponseEntity<PlantioResposta> criar(@Valid @RequestBody PlantioRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    var resposta = service.criar(dto);
+    return ResponseEntity.created(URI.create("/api/v1/plantios/" + resposta.id())).body(resposta);
   }
 
   @GetMapping("/api/v1/plantios/{id}")
-  @Operation(
-      summary = "Detalha plantios",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+  @Operation(summary = "Detalha plantio")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public PlantioResposta detalhar(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    return service.detalhar(id);
   }
 
   @PutMapping("/api/v1/plantios/{id}")
   @Operation(
-      summary = "Altera plantios",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      summary = "Altera plantio",
+      description = "Alteração de área preserva os rateios gravados e a data de encerramento.")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public PlantioResposta alterar(@PathVariable Long id, @Valid @RequestBody PlantioRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    return service.alterar(id, dto);
   }
 
+  @ApiResponse(
+      responseCode = "501",
+      description = "Encerramento pertence a C06b",
+      content = @Content(schema = @Schema(implementation = ErroResposta.class)))
   @PostMapping("/api/v1/plantios/{id}/encerramento")
   @Operation(
       summary = "Encerra plantio",
