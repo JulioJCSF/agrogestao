@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.7
+Versão 1.8
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -27,6 +27,11 @@ A data de início de um plantio não pode ser posterior à data corrente.
 ### RN03 — Encerramento posterior ao início
 A data de encerramento não pode ser anterior à data de início.
 **Origem:** RF13
+
+- A data de encerramento não pode ser posterior à data corrente.
+- Plantio já encerrado não é encerrado de novo.
+- A data de encerramento não pode ser anterior à data do fato de lançamento já gravado no plantio: produção, despesa (pelo rateio), diária ou item de venda, inclusive despesa estornada. É a contrapartida da RN04 para os lançamentos que já existem.
+- Em todos os casos: rejeitar com HTTP 422, sem gravar.
 
 ### RN04 — Lançamento em plantio encerrado
 Nenhum lançamento — produção, despesa, diária ou item de venda — pode ter data do fato posterior à data de encerramento do plantio.
@@ -257,4 +262,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Nenhuma regra segue pendente.

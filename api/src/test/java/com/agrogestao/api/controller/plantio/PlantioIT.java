@@ -6,8 +6,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.agrogestao.api.IntegracaoTest;
+import com.agrogestao.api.config.RelogioAjustavel;
 import com.jayway.jsonpath.JsonPath;
 import java.sql.SQLException;
+import java.time.Instant;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +19,7 @@ import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
@@ -24,6 +28,7 @@ class PlantioIT extends IntegracaoTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   @Autowired jakarta.persistence.EntityManager entityManager;
+  @Autowired RelogioAjustavel relogio;
   Long autor, produtor, propriedade, cultura;
 
   @BeforeEach
@@ -34,12 +39,12 @@ class PlantioIT extends IntegracaoTest {
             Long.class);
     produtor =
         jdbc.queryForObject(
-            "insert into produtor(nome,documento,criado_por) values ('Produtor Fictício Plantio','99900000188',?) returning id",
+            "insert into produtor(nome,documento,criado_por) values ('Produtor Teste Plantio','99900000188',?) returning id",
             Long.class,
             autor);
     propriedade =
         jdbc.queryForObject(
-            "insert into propriedade(produtor_id,nome,criado_por) values (?,'Sítio Fictício Plantio',?) returning id",
+            "insert into propriedade(produtor_id,nome,area_total,criado_por) values (?,'Sítio Teste',10.000,?) returning id",
             Long.class,
             produtor,
             autor);
@@ -48,6 +53,11 @@ class PlantioIT extends IntegracaoTest {
             "insert into cultura(nome,tipo_ciclo_padrao,unidade_medida,criado_por) values ('Cultura Fictícia Plantio','CURTO','kg',?) returning id",
             Long.class,
             autor);
+  }
+
+  @AfterEach
+  void restaurarRelogio() {
+    relogio.restaurar();
   }
 
   String corpo(String area, String inicio) {
@@ -373,5 +383,249 @@ class PlantioIT extends IntegracaoTest {
                 .param("periodoInicio", "2026-03-01")
                 .param("periodoFim", "2026-02-01"))
         .andExpect(status().isUnprocessableEntity());
+  }
+
+  // C06b: encerramento. A cultura fictícia é CURTO como o Feijão da Q00a; o Feijão do catálogo é
+  // LONGO e quebraria o tipoCiclo afirmado em criar().
+
+  ResultActions encerrar(Number id, String data) throws Exception {
+    return mvc.perform(
+        post("/api/v1/plantios/" + id + "/encerramento")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"dataEncerramento\":\"" + data + "\"}"));
+  }
+
+  String dataEncerramento(Number id) {
+    return jdbc.queryForObject(
+        "select data_encerramento::text from plantio where id=?", String.class, id);
+  }
+
+  ResultActions despesa(Number plantio, String valor, String dataFato) throws Exception {
+    Long adubo =
+        jdbc.queryForObject(
+            "select id from categoria_despesa where nome = 'Adubo e fertilizantes'", Long.class);
+    return mvc.perform(
+        post("/api/v1/despesas")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(
+                "{\"produtorId\":%d,\"categoriaDespesaId\":%d,\"descricao\":\"Despesa Teste Plantio\",\"valorTotal\":%s,\"dataFato\":\"%s\",\"plantioIds\":[%s]}"
+                    .formatted(produtor, adubo, valor, dataFato, plantio)));
+  }
+
+  Number lancarDespesa(Number plantio, String valor, String dataFato) throws Exception {
+    return JsonPath.read(
+        despesa(plantio, valor, dataFato)
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString(),
+        "$.id");
+  }
+
+  void assertBloqueadoPorLancamento(Number id, String dataCitada) throws Exception {
+    encerrar(id, "2026-06-30")
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.erro").value("REGRA_NEGOCIO"))
+        .andExpect(
+            jsonPath("$.mensagem")
+                .value(
+                    "Há lançamento em "
+                        + dataCitada
+                        + ", posterior à data de encerramento informada."));
+    assertThat(dataEncerramento(id)).isNull();
+  }
+
+  @Test
+  void deveEncerrarQuandoDataForNoInicioOuDepois() throws Exception {
+    Number pl1 = criar("1.000", "2026-02-01");
+    Number pl2 = criar("1.000", "2026-02-01");
+    for (var caso : java.util.Map.of(pl1, "2026-06-30", pl2, "2026-02-01").entrySet()) {
+      encerrar(caso.getKey(), caso.getValue())
+          .andExpect(status().isCreated())
+          .andExpect(header().string("Location", "/api/v1/plantios/" + caso.getKey()))
+          .andExpect(jsonPath("$.dataEncerramento").value(caso.getValue()))
+          .andExpect(jsonPath("$.situacao").value("ENCERRADO"));
+      mvc.perform(get("/api/v1/plantios/" + caso.getKey()))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.dataEncerramento").value(caso.getValue()))
+          .andExpect(jsonPath("$.situacao").value("ENCERRADO"));
+      assertThat(dataEncerramento(caso.getKey())).isEqualTo(caso.getValue());
+    }
+    mvc.perform(
+            get("/api/v1/plantios")
+                .param("produtorId", produtor.toString())
+                .param("situacao", "ENCERRADO"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.itens[*].id", containsInAnyOrder(pl1.intValue(), pl2.intValue())));
+    mvc.perform(
+            get("/api/v1/plantios")
+                .param("produtorId", produtor.toString())
+                .param("situacao", "ABERTO"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(0));
+  }
+
+  @Test
+  void deveRejeitarSemGravarQuandoEncerramentoForAnteriorAoInicio() throws Exception {
+    Number pl1 = criar("1.000", "2026-02-01");
+    encerrar(pl1, "2026-01-31")
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.erro").value("REGRA_NEGOCIO"))
+        .andExpect(
+            jsonPath("$.mensagem")
+                .value(
+                    "A data de encerramento não pode ser anterior à data de início (01/02/2026)."));
+    mvc.perform(get("/api/v1/plantios/" + pl1))
+        .andExpect(jsonPath("$.situacao").value("ABERTO"))
+        .andExpect(jsonPath("$.dataEncerramento").value(nullValue()));
+    assertThat(dataEncerramento(pl1)).isNull();
+    jdbc.execute(
+        (ConnectionCallback<Void>)
+            connection -> {
+              var savepoint = connection.setSavepoint();
+              try (var statement = connection.createStatement()) {
+                assertThatThrownBy(
+                        () ->
+                            statement.executeUpdate(
+                                "update plantio set data_encerramento='2026-01-31' where id="
+                                    + pl1))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("ck_plantio_encerra");
+              } finally {
+                connection.rollback(savepoint);
+                connection.releaseSavepoint(savepoint);
+              }
+              return null;
+            });
+  }
+
+  @Test
+  void deveRejeitarLancamentoPosteriorQuandoPlantioForEncerradoPelaApi() throws Exception {
+    Number pl1 = criar("1.000", "2026-02-01");
+    lancarDespesa(pl1, "50.00", "2026-06-15");
+    encerrar(pl1, "2026-06-30").andExpect(status().isCreated());
+    lancarDespesa(pl1, "50.00", "2026-06-30");
+    despesa(pl1, "50.00", "2026-07-01")
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.erro").value("REGRA_NEGOCIO"))
+        .andExpect(
+            jsonPath("$.mensagem")
+                .value(
+                    "O plantio foi encerrado em 30/06/2026. A data do fato não pode ser posterior"
+                        + " ao encerramento."));
+    assertThat(
+            jdbc.queryForList(
+                "select data_fato::text from despesa where produtor_id=? order by data_fato",
+                String.class,
+                produtor))
+        .containsExactly("2026-06-15", "2026-06-30");
+  }
+
+  @Test
+  void deveRejeitarSemGravarQuandoHouverLancamentoPosterior() throws Exception {
+    Number pl1 = criar("1.000", "2026-02-01");
+    lancarDespesa(pl1, "50.00", "2026-07-10");
+    jdbc.update(
+        "insert into producao(plantio_id,quantidade,unidade_medida,data_fato,data_coleta,criado_por) values (?,10,'kg','2026-06-20','2026-06-20',?)",
+        pl1,
+        autor);
+    assertBloqueadoPorLancamento(pl1, "10/07/2026");
+  }
+
+  @Test
+  void deveContarDespesaEstornadaQuandoEncerrar() throws Exception {
+    Number pl1 = criar("1.000", "2026-02-01");
+    Number despesa = lancarDespesa(pl1, "50.00", "2026-07-10");
+    jdbc.update("update despesa set estornada = true where id=?", despesa);
+    entityManager.clear();
+    assertThat(
+            jdbc.queryForObject("select estornada from despesa where id=?", Boolean.class, despesa))
+        .isTrue();
+    assertBloqueadoPorLancamento(pl1, "10/07/2026");
+  }
+
+  @Test
+  void deveRejeitarQuandoCadaFonteTiverLancamentoPosterior() throws Exception {
+    Long cliente =
+        jdbc.queryForObject(
+            "insert into cliente(nome,tipo_canal,criado_por) values ('Cliente Teste Plantio','FEIRA',?) returning id",
+            Long.class,
+            autor);
+    Number comProducao = criar("1.000", "2026-02-01");
+    jdbc.update(
+        "insert into producao(plantio_id,quantidade,unidade_medida,data_fato,data_coleta,criado_por) values (?,10,'kg','2026-07-01','2026-07-01',?)",
+        comProducao,
+        autor);
+    Number comDespesa = criar("1.000", "2026-02-01");
+    lancarDespesa(comDespesa, "50.00", "2026-07-02");
+    Number comDiaria = criar("1.000", "2026-02-01");
+    jdbc.update(
+        "insert into diaria(plantio_id,natureza,quantidade_dias,valor_unitario,data_fato,data_coleta,criado_por) values (?,'PAGA',1,80,'2026-07-03','2026-07-03',?)",
+        comDiaria,
+        autor);
+    Number comVenda = criar("1.000", "2026-02-01");
+    Long venda =
+        jdbc.queryForObject(
+            "insert into venda(produtor_id,cliente_id,valor_total,data_fato,data_coleta,criado_por) values (?,?,80,'2026-07-04','2026-07-04',?) returning id",
+            Long.class,
+            produtor,
+            cliente,
+            autor);
+    jdbc.update(
+        "insert into item_venda(venda_id,plantio_id,quantidade,unidade_medida,valor_unitario,valor_total,criado_por) values (?,?,1,'kg',80,80,?)",
+        venda,
+        comVenda,
+        autor);
+    assertBloqueadoPorLancamento(comProducao, "01/07/2026");
+    assertBloqueadoPorLancamento(comDespesa, "02/07/2026");
+    assertBloqueadoPorLancamento(comDiaria, "03/07/2026");
+    assertBloqueadoPorLancamento(comVenda, "04/07/2026");
+  }
+
+  @Test
+  void deveRejeitarQuandoPlantioJaEstiverEncerrado() throws Exception {
+    Number pl1 = criar("1.000", "2026-02-01");
+    encerrar(pl1, "2026-06-30").andExpect(status().isCreated());
+    encerrar(pl1, "2026-07-15")
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.erro").value("REGRA_NEGOCIO"))
+        .andExpect(jsonPath("$.mensagem").value("O plantio já foi encerrado em 30/06/2026."));
+    assertThat(dataEncerramento(pl1)).isEqualTo("2026-06-30");
+  }
+
+  @Test
+  void deveRejeitarEncerramentoFuturoQuandoUtcJaEstiverNoDiaSeguinte() throws Exception {
+    relogio.fixar(Instant.parse("2026-10-12T01:30:00Z"));
+    Number pl1 = criar("1.000", "2026-02-01");
+    encerrar(pl1, "2026-10-12")
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(
+            jsonPath("$.mensagem").value("A data de encerramento não pode ser posterior a hoje."));
+    assertThat(dataEncerramento(pl1)).isNull();
+    encerrar(pl1, "2026-10-11").andExpect(status().isCreated());
+    assertThat(dataEncerramento(pl1)).isEqualTo("2026-10-11");
+  }
+
+  @Test
+  void deveResponder400Ou404QuandoEncerramentoForInvalido() throws Exception {
+    Number pl1 = criar("1.000", "2026-02-01");
+    for (String corpo : java.util.List.of("{}", "{\"dataEncerramento\":null}"))
+      mvc.perform(
+              post("/api/v1/plantios/" + pl1 + "/encerramento")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(corpo))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.erro").value("VALIDACAO"))
+          .andExpect(jsonPath("$.campos[*].campo", hasItem("dataEncerramento")));
+    encerrar(pl1, "2026-13-01")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.erro").value("VALIDACAO"))
+        .andExpect(jsonPath("$.campos[*].campo", hasItem("dataEncerramento")));
+    encerrar(Long.MAX_VALUE, "2026-06-30")
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.erro").value("NAO_ENCONTRADO"))
+        .andExpect(jsonPath("$.mensagem").value("Plantio não encontrado."));
+    assertThat(dataEncerramento(pl1)).isNull();
   }
 }

@@ -6,6 +6,8 @@ import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -15,9 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PlantioService {
+  private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
   private final PlantioRepository repository;
   private final PropriedadeRepository propriedades;
   private final CulturaRepository culturas;
+  private final ProducaoRepository producoes;
+  private final DespesaRepository despesas;
+  private final DiariaRepository diarias;
+  private final VendaRepository vendas;
   private final Clock relogio;
 
   public PaginaResposta<PlantioResposta> listar(
@@ -68,6 +76,50 @@ public class PlantioService {
     return resposta(repository.saveAndFlush(entidade));
   }
 
+  /**
+   * Validações da C06b nesta ordem: já encerrado, data futura, RN03 e lançamento posterior (a
+   * contrapartida da RN04 para o que já está gravado). Só grava {@code data_encerramento}.
+   */
+  @Transactional
+  public PlantioResposta encerrar(Long id, EncerramentoPlantioRequisicao dto) {
+    Plantio entidade = encontrar(id);
+    LocalDate encerramento = dto.dataEncerramento();
+    if (entidade.getDataEncerramento() != null)
+      throw new RegraNegocioException(
+          "O plantio já foi encerrado em " + entidade.getDataEncerramento().format(DATA) + ".");
+    if (encerramento.isAfter(LocalDate.now(relogio)))
+      throw new RegraNegocioException("A data de encerramento não pode ser posterior a hoje.");
+    exigirEncerramentoAposInicio(entidade.getDataInicio(), encerramento);
+    Optional<LocalDate> ultimo = ultimoLancamento(id);
+    if (ultimo.isPresent() && ultimo.get().isAfter(encerramento))
+      throw new RegraNegocioException(
+          "Há lançamento em "
+              + ultimo.get().format(DATA)
+              + ", posterior à data de encerramento informada.");
+    entidade.setDataEncerramento(encerramento);
+    return resposta(repository.saveAndFlush(entidade));
+  }
+
+  /** Maior data do fato entre produção, despesa (pelo rateio), diária e item de venda. */
+  private Optional<LocalDate> ultimoLancamento(Long plantioId) {
+    return Stream.of(
+            producoes.ultimaDataFatoDoPlantio(plantioId),
+            despesas.ultimaDataFatoDoPlantio(plantioId),
+            diarias.ultimaDataFatoDoPlantio(plantioId),
+            vendas.ultimaDataFatoDoPlantio(plantioId))
+        .filter(Objects::nonNull)
+        .max(Comparator.naturalOrder());
+  }
+
+  /** RN03, com a mesma mensagem no encerramento e na alteração do início. */
+  private static void exigirEncerramentoAposInicio(LocalDate inicio, LocalDate encerramento) {
+    if (encerramento.isBefore(inicio))
+      throw new RegraNegocioException(
+          "A data de encerramento não pode ser anterior à data de início ("
+              + inicio.format(DATA)
+              + ").");
+  }
+
   private Plantio encontrar(Long id) {
     return repository
         .findById(id)
@@ -80,12 +132,8 @@ public class PlantioService {
       throw new RegraNegocioException("A área do plantio deve ser maior que zero.");
     if (dto.dataInicio().isAfter(LocalDate.now(relogio)))
       throw new RegraNegocioException("A data de início não pode ser posterior a hoje.");
-    if (entidade.getDataEncerramento() != null
-        && entidade.getDataEncerramento().isBefore(dto.dataInicio()))
-      throw new RegraNegocioException(
-          "A data de encerramento não pode ser anterior à data de início ("
-              + dto.dataInicio().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-              + ").");
+    if (entidade.getDataEncerramento() != null)
+      exigirEncerramentoAposInicio(dto.dataInicio(), entidade.getDataEncerramento());
     Propriedade propriedade =
         propriedades
             .findById(dto.propriedadeId())
