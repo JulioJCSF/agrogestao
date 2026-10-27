@@ -421,8 +421,8 @@ Plantios P1 (1,000 ha) e P2 (1,000 ha). Despesa D1 de R$ 80,00, data do fato 202
 
 ## Pontos para revisar
 
-1. **Convenção de arredondamento.** Truncar o valor e usar HALF_UP no percentual foi decidido na Q00b. Vale registrar na RN09 e no critério de pronto da L03, para não ficar só neste documento.
+1. **Convenção de arredondamento.** Truncar o valor e usar HALF_UP no percentual foi decidido na Q00b. Vale registrar na RN09 e no critério de pronto da L03, para não ficar só neste documento. Resolvido em 27/10 (L04a): registrado na RN09.
 2. **CT015 na QA 3.2.** O texto lista "33,33 / 33,33 / 33,34" sem dizer qual plantio leva o centavo. Este documento fixa: o de menor id (P1). Ajustar a 3.2 na próxima revisão.
-3. **Despesa que não cobre um centavo por plantio.** R$ 0,02 entre três plantios iguais dá 0,02 / 0,00 / 0,00: dois rateios gravados com valor zero (o percentual continua > 0, então a constraint passa). Caso raro e fora do CT017; decidir se a API recusa despesa com valor menor que o número de plantios em centavos.
-4. **Mensagens de erro.** As mensagens de CT011 e CT020 são propostas. O teste verifica `erro` e status; a mensagem exata é confirmada quando a L04a e a A03b forem implementadas.
+3. **Despesa que não cobre um centavo por plantio.** R$ 0,02 entre três plantios iguais dá 0,02 / 0,00 / 0,00: dois rateios gravados com valor zero (o percentual continua > 0, então a constraint passa). Caso raro e fora do CT017; decidir se a API recusa despesa com valor menor que o número de plantios em centavos. Resolvido em 27/10 (L04a): registrado na RN09.
+4. **Mensagens de erro.** As mensagens de CT011 e CT020 são propostas. O teste verifica `erro` e status; a mensagem exata é confirmada quando a L04a e a A03b forem implementadas. As mensagens do CT011 ficam confirmadas pela L04a.
 5. **Estorno e apuração.** Este documento não define se despesa estornada sai do custo de desembolso em novas emissões. Isso pertence à Q00d (apuração).

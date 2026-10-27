@@ -228,12 +228,7 @@ class ContratoIT extends IntegracaoTest {
         .andExpect(jsonPath("$.timestamp").isNotEmpty())
         .andExpect(jsonPath("$.campos", hasSize(0)))
         .andExpect(jsonPath("$.mensagem").isNotEmpty());
-    mvc.perform(
-            post("/api/v1/despesas")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"produtorId\":1,\"categoriaDespesaId\":2,\"descricao\":\"Fixture\",\"valorTotal\":100.25,\"dataFato\":\"2026-02-01\",\"plantioIds\":[1,2]}"))
-        .andExpect(status().isNotImplemented());
+    mvc.perform(post("/api/v1/despesas/1/estorno")).andExpect(status().isNotImplemented());
   }
 
   @Test

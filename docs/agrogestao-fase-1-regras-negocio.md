@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.6
+Versão 1.7
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -64,10 +64,13 @@ A soma dos valores rateados deve ser exatamente igual ao valor total da despesa.
 **Origem:** RF20, RF21
 **Exemplo:** R$ 100,00 entre três plantios de área igual → 33,33 + 33,33 + 33,34.
 
+- Cada parcela é truncada em duas casas (`RoundingMode.DOWN`); o residual é o valor total menos a soma das parcelas truncadas. O percentual gravado é a área dividida pela soma das áreas, arredondado em seis casas com a metade para cima (`HALF_UP`).
+- Despesa com valor total menor que R$ 0,01 por plantio vinculado é rejeitada com HTTP 422: o rateio deixaria plantio vinculado com valor zero.
+
 > Sem esta regra, a soma dos custos dos plantios não bate com a soma das despesas, e a divergência aparece justamente no relatório entregue ao produtor.
 
 ### RN10 — Gravação no lançamento
-Percentual e valor rateado são calculados uma vez, no lançamento, e gravados. Consultas leem o valor gravado; nunca recalculam.
+Percentual e valor rateado são calculados uma vez, no lançamento, e gravados. Consultas leem o valor gravado; nunca recalculam. Na alteração da despesa, o rateio só é recalculado, com as áreas atuais dos plantios, quando mudam o valor total ou o conjunto de plantios vinculados; alterar só a descrição, a categoria ou a data do fato mantém o rateio gravado.
 **Origem:** RF21, RN05
 
 ### RN11 — Exclusão de despesa
@@ -254,4 +257,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Nenhuma regra segue pendente.
