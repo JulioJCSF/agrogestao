@@ -1,13 +1,14 @@
 package com.agrogestao.api.controller.cliente;
 
 import com.agrogestao.api.dto.*;
-import com.agrogestao.api.exception.ApiNaoImplementadaException;
+import com.agrogestao.api.service.cliente.ClienteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.time.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -30,27 +31,30 @@ import org.springframework.web.bind.annotation.*;
       description = "Regra de negócio",
       content = @Content(schema = @Schema(implementation = ErroResposta.class))),
   @ApiResponse(
-      responseCode = "501",
-      description = "Contrato publicado; implementação em sprint posterior",
+      responseCode = "404",
+      description = "Recurso inexistente",
       content = @Content(schema = @Schema(implementation = ErroResposta.class)))
 })
 public class ClienteController {
+  private final ClienteService service;
 
   @GetMapping("/api/v1/clientes")
   @Operation(
       summary = "Lista clientes",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description =
+          "Paginada e ordenada por id. A busca filtra o nome por trecho, sem diferenciar"
+              + " maiúsculas.")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public PaginaResposta<ClienteResposta> listar(
       @RequestParam(defaultValue = "") String busca,
       @Valid @ModelAttribute PaginacaoConsulta consulta) {
-    throw new ApiNaoImplementadaException();
+    return service.listar(busca, consulta);
   }
 
   @PostMapping("/api/v1/clientes")
   @Operation(
-      summary = "Cadastra clientes",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      summary = "Cadastra cliente",
+      description = "Nome e tipo de canal (RF29). Nomes repetidos são aceitos.")
   @ResponseStatus(HttpStatus.CREATED)
   @ApiResponse(
       responseCode = "201",
@@ -61,24 +65,21 @@ public class ClienteController {
               description = "URL do recurso criado",
               schema = @Schema(type = "string", format = "uri")))
   public ResponseEntity<ClienteResposta> criar(@Valid @RequestBody ClienteRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    ClienteResposta resposta = service.criar(dto);
+    return ResponseEntity.created(URI.create("/api/v1/clientes/" + resposta.id())).body(resposta);
   }
 
   @GetMapping("/api/v1/clientes/{id}")
-  @Operation(
-      summary = "Detalha clientes",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+  @Operation(summary = "Detalha cliente")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public ClienteResposta detalhar(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    return service.detalhar(id);
   }
 
   @PutMapping("/api/v1/clientes/{id}")
-  @Operation(
-      summary = "Altera clientes",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+  @Operation(summary = "Altera cliente", description = "Troca nome e tipo de canal.")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public ClienteResposta alterar(@PathVariable Long id, @Valid @RequestBody ClienteRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    return service.alterar(id, dto);
   }
 }
