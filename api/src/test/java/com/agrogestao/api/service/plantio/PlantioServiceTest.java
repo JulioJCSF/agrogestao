@@ -20,8 +20,12 @@ class PlantioServiceTest {
   PlantioRepository repo = mock(PlantioRepository.class);
   PropriedadeRepository propriedades = mock(PropriedadeRepository.class);
   CulturaRepository culturas = mock(CulturaRepository.class);
+  ProducaoRepository producoes = mock(ProducaoRepository.class);
+  DespesaRepository despesas = mock(DespesaRepository.class);
+  DiariaRepository diarias = mock(DiariaRepository.class);
+  VendaRepository vendas = mock(VendaRepository.class);
   Clock clock = Clock.fixed(Instant.parse("2026-10-12T01:30:00Z"), ZoneId.of("America/Fortaleza"));
-  PlantioService service = new PlantioService(repo, propriedades, culturas, clock);
+  PlantioService service = servico(clock);
   Cultura cultura = new Cultura();
   Propriedade propriedade = new Propriedade();
 
@@ -36,6 +40,11 @@ class PlantioServiceTest {
     when(propriedades.findById(1L)).thenReturn(Optional.of(propriedade));
     when(culturas.findById(2L)).thenReturn(Optional.of(cultura));
     when(repo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+  }
+
+  PlantioService servico(Clock relogio) {
+    return new PlantioService(
+        repo, propriedades, culturas, producoes, despesas, diarias, vendas, relogio);
   }
 
   PlantioRequisicao entrada(String area, LocalDate inicio, TipoCiclo ciclo) {
@@ -186,5 +195,137 @@ class PlantioServiceTest {
         .isInstanceOf(RecursoNaoEncontradoException.class);
     assertThatThrownBy(() -> service.alterar(99L, entrada("1", LocalDate.of(2026, 2, 1), null)))
         .isInstanceOf(RecursoNaoEncontradoException.class);
+    assertThatThrownBy(() -> service.encerrar(99L, encerramento(2026, 6, 30)))
+        .isInstanceOf(RecursoNaoEncontradoException.class)
+        .hasMessage("Plantio não encontrado.");
+  }
+
+  // C06b: "hoje" é 2026-10-11 em Fortaleza, salvo no teste da armadilha do UTC.
+  PlantioService meioDia =
+      servico(
+          Clock.fixed(Instant.parse("2026-10-11T12:00:00-03:00"), ZoneId.of("America/Fortaleza")));
+
+  Plantio abertoDesde(LocalDate inicio) {
+    Plantio plantio = new Plantio();
+    ReflectionTestUtils.setField(plantio, "id", 4L);
+    plantio.setPropriedade(propriedade);
+    plantio.setCultura(cultura);
+    plantio.setArea(BigDecimal.ONE);
+    plantio.setDataInicio(inicio);
+    when(repo.findById(4L)).thenReturn(Optional.of(plantio));
+    return plantio;
+  }
+
+  static EncerramentoPlantioRequisicao encerramento(int ano, int mes, int dia) {
+    return new EncerramentoPlantioRequisicao(LocalDate.of(ano, mes, dia));
+  }
+
+  void assertRejeitado(PlantioService alvo, EncerramentoPlantioRequisicao dto, String mensagem) {
+    assertThatThrownBy(() -> alvo.encerrar(4L, dto))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(mensagem);
+    verify(repo, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void deveEncerrarQuandoDataForHoje() {
+    Plantio plantio = abertoDesde(LocalDate.of(2026, 2, 1));
+    var resposta = meioDia.encerrar(4L, encerramento(2026, 10, 11));
+    assertThat(resposta.dataEncerramento()).isEqualTo(LocalDate.of(2026, 10, 11));
+    assertThat(resposta.situacao()).isEqualTo(SituacaoPlantio.ENCERRADO);
+    assertThat(plantio.getDataInicio()).isEqualTo(LocalDate.of(2026, 2, 1));
+    assertThat(plantio.getArea()).isEqualByComparingTo("1");
+    verify(repo).saveAndFlush(plantio);
+  }
+
+  @Test
+  void deveEncerrarQuandoDataForODiaDoInicio() {
+    abertoDesde(LocalDate.of(2026, 2, 1));
+    assertThat(meioDia.encerrar(4L, encerramento(2026, 2, 1)).dataEncerramento())
+        .isEqualTo(LocalDate.of(2026, 2, 1));
+  }
+
+  @Test
+  void deveRejeitarEncerramentoAmanhaQuandoUtcJaEstiverNoDiaSeguinte() {
+    Plantio plantio = abertoDesde(LocalDate.of(2026, 2, 1));
+    assertRejeitado(
+        service,
+        encerramento(2026, 10, 12),
+        "A data de encerramento não pode ser posterior a hoje.");
+    assertThat(plantio.getDataEncerramento()).isNull();
+    assertThat(service.encerrar(4L, encerramento(2026, 10, 11)).situacao())
+        .isEqualTo(SituacaoPlantio.ENCERRADO);
+  }
+
+  @Test
+  void deveRejeitarSemGravarQuandoPlantioJaEstiverEncerrado() {
+    Plantio plantio = abertoDesde(LocalDate.of(2026, 2, 1));
+    plantio.setDataEncerramento(LocalDate.of(2026, 6, 30));
+    assertRejeitado(
+        meioDia, encerramento(2026, 7, 15), "O plantio já foi encerrado em 30/06/2026.");
+    assertThat(plantio.getDataEncerramento()).isEqualTo(LocalDate.of(2026, 6, 30));
+    verifyNoInteractions(producoes, despesas, diarias, vendas);
+  }
+
+  @Test
+  void deveRejeitarComMensagemFixaQuandoEncerramentoForAnteriorAoInicio() {
+    Plantio plantio = abertoDesde(LocalDate.of(2026, 2, 1));
+    assertRejeitado(
+        meioDia,
+        encerramento(2026, 1, 31),
+        "A data de encerramento não pode ser anterior à data de início (01/02/2026).");
+    assertThat(plantio.getDataEncerramento()).isNull();
+  }
+
+  @Test
+  void deveSeguirOrdemDasValidacoesQuandoMaisDeUmaFalhar() {
+    Plantio plantio = abertoDesde(LocalDate.of(2026, 2, 1));
+    when(producoes.ultimaDataFatoDoPlantio(4L)).thenReturn(LocalDate.of(2026, 6, 10));
+    assertRejeitado(
+        meioDia,
+        encerramento(2026, 1, 31),
+        "A data de encerramento não pode ser anterior à data de início (01/02/2026).");
+    plantio.setDataEncerramento(LocalDate.of(2026, 6, 30));
+    assertRejeitado(
+        meioDia, encerramento(2026, 10, 12), "O plantio já foi encerrado em 30/06/2026.");
+  }
+
+  @Test
+  void deveEncerrarQuandoUltimoLancamentoForNoProprioDia() {
+    abertoDesde(LocalDate.of(2026, 2, 1));
+    when(despesas.ultimaDataFatoDoPlantio(4L)).thenReturn(LocalDate.of(2026, 6, 30));
+    when(producoes.ultimaDataFatoDoPlantio(4L)).thenReturn(LocalDate.of(2026, 6, 10));
+    assertThat(meioDia.encerrar(4L, encerramento(2026, 6, 30)).situacao())
+        .isEqualTo(SituacaoPlantio.ENCERRADO);
+  }
+
+  @Test
+  void deveCitarLancamentoMaisTardeQuandoHouverLancamentoPosterior() {
+    Plantio plantio = abertoDesde(LocalDate.of(2026, 2, 1));
+    when(producoes.ultimaDataFatoDoPlantio(4L)).thenReturn(LocalDate.of(2026, 6, 10));
+    when(despesas.ultimaDataFatoDoPlantio(4L)).thenReturn(LocalDate.of(2026, 7, 10));
+    when(diarias.ultimaDataFatoDoPlantio(4L)).thenReturn(LocalDate.of(2026, 7, 5));
+    assertRejeitado(
+        meioDia,
+        encerramento(2026, 6, 30),
+        "Há lançamento em 10/07/2026, posterior à data de encerramento informada.");
+    assertThat(plantio.getDataEncerramento()).isNull();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"producao", "despesa", "diaria", "venda"})
+  void deveRejeitarQuandoSoUmaFonteTiverLancamentoPosterior(String fonte) {
+    abertoDesde(LocalDate.of(2026, 2, 1));
+    LocalDate posterior = LocalDate.of(2026, 7, 1);
+    switch (fonte) {
+      case "producao" -> when(producoes.ultimaDataFatoDoPlantio(4L)).thenReturn(posterior);
+      case "despesa" -> when(despesas.ultimaDataFatoDoPlantio(4L)).thenReturn(posterior);
+      case "diaria" -> when(diarias.ultimaDataFatoDoPlantio(4L)).thenReturn(posterior);
+      default -> when(vendas.ultimaDataFatoDoPlantio(4L)).thenReturn(posterior);
+    }
+    assertRejeitado(
+        meioDia,
+        encerramento(2026, 6, 30),
+        "Há lançamento em 01/07/2026, posterior à data de encerramento informada.");
   }
 }

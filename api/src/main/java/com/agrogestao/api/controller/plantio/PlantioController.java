@@ -1,7 +1,6 @@
 package com.agrogestao.api.controller.plantio;
 
 import com.agrogestao.api.dto.*;
-import com.agrogestao.api.exception.ApiNaoImplementadaException;
 import com.agrogestao.api.model.SituacaoPlantio;
 import com.agrogestao.api.service.plantio.PlantioService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -90,14 +89,12 @@ public class PlantioController {
     return service.alterar(id, dto);
   }
 
-  @ApiResponse(
-      responseCode = "501",
-      description = "Encerramento pertence a C06b",
-      content = @Content(schema = @Schema(implementation = ErroResposta.class)))
   @PostMapping("/api/v1/plantios/{id}/encerramento")
   @Operation(
       summary = "Encerra plantio",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description =
+          "Encerramento não futuro, não anterior ao início nem a lançamento já gravado no plantio;"
+              + " plantio já encerrado não é encerrado de novo.")
   @ResponseStatus(HttpStatus.CREATED)
   @ApiResponse(
       responseCode = "201",
@@ -109,6 +106,7 @@ public class PlantioController {
               schema = @Schema(type = "string", format = "uri")))
   public ResponseEntity<PlantioResposta> encerrar(
       @PathVariable Long id, @Valid @RequestBody EncerramentoPlantioRequisicao dto) {
-    throw new ApiNaoImplementadaException();
+    var resposta = service.encerrar(id, dto);
+    return ResponseEntity.created(URI.create("/api/v1/plantios/" + resposta.id())).body(resposta);
   }
 }

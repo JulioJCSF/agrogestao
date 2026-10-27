@@ -265,5 +265,5 @@ Os mesmos PL1 (encerrado em 2026-06-30) e PL2 (aberto) do CT007.
 
 1. **Convenções de status.** Área nula e mais de 3 casas decimais saem como 400; área zero ou negativa sai como 422. Confirmar com quem pegar a C06a, para o DTO não ganhar `@Positive` e transformar a RN01 em 400.
 2. **Fuso do "hoje".** `America/Fortaleza` não está registrado nos padrões técnicos. A mesma convenção vale para a RN35 (data do fato não futura, Q00f). Vale registrar na 2.4.
-3. **Encerramento com data futura.** Nenhuma regra proíbe encerrar um plantio com data posterior a hoje. Se for para proibir, é regra nova na Fase 1, não um caso deste documento.
+3. **Encerramento com data futura.** Nenhuma regra proíbe encerrar um plantio com data posterior a hoje. Se for para proibir, é regra nova na Fase 1, não um caso deste documento. Resolvido em 27/10 (C06b): data futura rejeitada, registrada na RN03.
 4. **Mensagens de erro.** São propostas. O teste verifica `erro` e status; a mensagem exata é confirmada na implementação.
