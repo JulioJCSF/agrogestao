@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.2
+Versão 1.3
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -111,7 +111,7 @@ Cadastrar ou alterar valor de referência não altera diárias já lançadas.
 ## 4. Apuração
 
 ### RN19 — Custo de desembolso
-Custo de desembolso de um plantio no período é a soma dos valores rateados das despesas cuja data do fato caia no período.
+Custo de desembolso de um plantio no período é a soma dos valores rateados das despesas cuja data do fato caia no período. Despesa estornada (`RN11`) não entra; emissão já gravada não muda (`RN34`).
 **Origem:** RF34
 
 ### RN20 — Vedação de dupla contagem
@@ -134,6 +134,11 @@ Resultado = receita − custo de desembolso.
 
 ### RN24 — Período de apuração
 O período deriva do tipo de ciclo efetivo do plantio: ciclo longo apura por safra, ciclo curto por mês.
+
+- **Safra**, para a apuração, vai da data de início à data de encerramento do plantio; com o plantio aberto, até a data corrente.
+- **Mês** é o mês-calendário consultado, do primeiro ao último dia; sem mês informado, o mês corrente.
+- As duas pontas do período são inclusivas.
+
 **Origem:** RF38, DA05
 
 ### RN25 — Produção e venda são grandezas distintas — **DECIDIDA**
@@ -235,4 +240,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas nesta versão. Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Nenhuma regra segue pendente.
