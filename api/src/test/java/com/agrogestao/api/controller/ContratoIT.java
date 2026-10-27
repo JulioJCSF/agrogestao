@@ -221,7 +221,7 @@ class ContratoIT extends IntegracaoTest {
   @Test
   @WithMockUser
   void deveRetornarErroPadraoQuandoModuloAindaForEsqueleto() throws Exception {
-    mvc.perform(get("/api/v1/clientes"))
+    mvc.perform(get("/api/v1/painel"))
         .andExpect(status().isNotImplemented())
         .andExpect(jsonPath("$.status").value(501))
         .andExpect(jsonPath("$.erro").value("NAO_IMPLEMENTADO"))
