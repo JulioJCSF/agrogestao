@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.3
+Versão 1.4
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -173,6 +173,11 @@ O saldo disponível é informativo. O sistema **não** impede venda de quantidad
 
 ### RN30 — Coerência de unidade
 A unidade de medida do item de venda deve ser a mesma da produção registrada para aquele plantio.
+
+- Sem produção registrada no plantio, vale a unidade da cultura do plantio.
+- A comparação ignora espaços nas pontas e diferença entre maiúsculas e minúsculas: "kg", "Kg" e " KG " são a mesma unidade.
+- O valor total do item é a quantidade multiplicada pelo valor unitário, arredondado em duas casas, com a metade arredondada para cima (`HALF_UP`). O valor total da venda é a soma dos totais dos itens já arredondados.
+
 **Origem:** RF31
 
 ---
@@ -240,4 +245,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Nenhuma regra segue pendente.
