@@ -206,7 +206,7 @@ GET    /api/v1/plantios/{id}/resultado
 
 Recurso aninhado só quando o filho não existe sem o pai. Produtor existe sozinho, então não aninha.
 
-**Contrato F13 (P17):** despesa pertence ao produtor e alcança vários plantios pelo rateio. Usa `POST /api/v1/despesas` com `produtorId`, `categoriaDespesaId`, `descricao`, `valorTotal`, `dataFato` e `plantioIds`. A resposta traz `rateios` com `plantioId`, `percentual` (fração em 6 casas) e `valorRateado`. `GET /plantios/{plantioId}/despesas` devolve o valor rateado àquele plantio. Uma lista vazia de plantios é tratada pelo serviço (422, RN06), conforme Q00b; os itens da lista têm validação de formato.
+**Contrato F13 (P17):** despesa pertence ao produtor e alcança vários plantios pelo rateio. Usa `POST /api/v1/despesas` com `produtorId`, `categoriaDespesaId`, `descricao`, `valorTotal`, `dataFato` e `plantioIds`. A resposta traz `rateios` com `plantioId`, `percentual` (fração em 6 casas) e `valorRateado`. `GET /plantios/{plantioId}/despesas` devolve o valor rateado àquele plantio. Uma lista vazia de plantios é tratada pelo serviço (422, RN06), conforme Q00b; os itens da lista têm validação de formato. O plantio pertence ao produtor da sua propriedade, e a alteração não pode levá-lo para a propriedade de outro produtor (422 `REGRA_NEGOCIO`); isso preserva o vínculo entre despesa, rateio e produtor.
 
 ### Paginação e formatos
 
@@ -216,7 +216,7 @@ Todas as listas do contrato usam:
 {"itens": [], "pagina": 0, "tamanho": 20, "total": 0}
 ```
 
-`pagina` começa em zero; `tamanho` padrão 20, permitido de 1 a 100. Ordenação determinística por id. Valores fora dos limites respondem 400 `VALIDACAO`. Busca textual usa `busca`; filtros de intervalo usam `periodoInicio` e `periodoFim`. Datas são `AAAA-MM-DD`; instantes são ISO-8601 em UTC. O front exibe datas em dd/mm/aaaa. CPF usa `documento` com 11 dígitos; dinheiro usa número decimal no JSON e BigDecimal no Java.
+`pagina` começa em zero; `tamanho` padrão 20, permitido de 1 a 100. Ordenação determinística por id. Valores fora dos limites respondem 400 `VALIDACAO`. Busca textual usa `busca`; filtros de intervalo usam `periodoInicio` e `periodoFim`. Datas são `AAAA-MM-DD`; instantes são ISO-8601 em UTC. O front exibe datas em dd/mm/aaaa. "Hoje" é `LocalDate.now(clock)` com o `Clock` de `RelogioConfig` em `America/Fortaleza`, e o Bean Validation (`@PastOrPresent` e afins) usa o mesmo relógio via `ClockProvider`. CPF usa `documento` com 11 dígitos; dinheiro usa número decimal no JSON e BigDecimal no Java.
 
 Essa paginação e as assinaturas compõem a proposta técnica da F13; revisão de uma pessoa do front é necessária antes do merge.
 

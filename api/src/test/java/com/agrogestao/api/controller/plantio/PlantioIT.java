@@ -226,6 +226,112 @@ class PlantioIT extends IntegracaoTest {
         .isEqualTo("2026-06-30");
   }
 
+  Long propriedadeDe(Long dono, String nome) {
+    return jdbc.queryForObject(
+        "insert into propriedade(produtor_id,nome,criado_por) values (?,?,?) returning id",
+        Long.class,
+        dono,
+        nome,
+        autor);
+  }
+
+  void ratearDespesaIntegral(Number plantio) {
+    Long categoria =
+        jdbc.queryForObject(
+            "insert into categoria_despesa(nome,criado_por) values ('Categoria Fictícia Transferência',?) returning id",
+            Long.class,
+            autor);
+    Long despesa =
+        jdbc.queryForObject(
+            "insert into despesa(produtor_id,categoria_despesa_id,descricao,valor_total,data_fato,data_coleta,criado_por) values (?,?,'Despesa Fictícia Transferência',100.00,'2026-02-01','2026-02-01',?) returning id",
+            Long.class,
+            produtor,
+            categoria,
+            autor);
+    jdbc.update(
+        "insert into rateio_despesa(despesa_id,plantio_id,percentual,valor_rateado,criado_por) values (?,?,1,100.00,?)",
+        despesa,
+        plantio,
+        autor);
+  }
+
+  void assertRateioIntegral(Number plantio) {
+    assertThat(
+            jdbc.queryForObject(
+                "select valor_rateado from rateio_despesa where plantio_id=?",
+                java.math.BigDecimal.class,
+                plantio))
+        .isEqualByComparingTo("100.00");
+  }
+
+  String corpoEm(Long outraPropriedade) {
+    return corpo("1", "2026-02-01")
+        .replace(
+            "\"propriedadeId\":" + propriedade + ",",
+            "\"propriedadeId\":" + outraPropriedade + ",");
+  }
+
+  @Test
+  void deveRejeitarSemGravarQuandoTransferirParaPropriedadeDeOutroProdutor() throws Exception {
+    Long outroProdutor =
+        jdbc.queryForObject(
+            "insert into produtor(nome,documento,criado_por) values ('Outro Produtor Fictício Plantio','99900001150',?) returning id",
+            Long.class,
+            autor);
+    Long propriedadeDoOutro = propriedadeDe(outroProdutor, "Sítio Fictício de Outro Produtor");
+    Number id = criar("1", "2026-02-01");
+    ratearDespesaIntegral(id);
+    var antes =
+        jdbc.queryForMap(
+            "select propriedade_id,area,tipo_ciclo,data_inicio,previsao_colheita,atualizado_em from plantio where id=?",
+            id);
+    mvc.perform(
+            put("/api/v1/plantios/" + id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(corpoEm(propriedadeDoOutro)))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.erro").value("REGRA_NEGOCIO"))
+        .andExpect(
+            jsonPath("$.mensagem")
+                .value("O plantio não pode ser transferido para propriedade de outro produtor."));
+    entityManager.flush();
+    assertThat(
+            jdbc.queryForMap(
+                "select propriedade_id,area,tipo_ciclo,data_inicio,previsao_colheita,atualizado_em from plantio where id=?",
+                id))
+        .isEqualTo(antes)
+        .containsEntry("propriedade_id", propriedade);
+    assertRateioIntegral(id);
+  }
+
+  @Test
+  void devePermitirQuandoTransferirParaPropriedadeDoMesmoProdutor() throws Exception {
+    Long outraPropriedade = propriedadeDe(produtor, "Segundo Sítio Fictício Plantio");
+    Number id = criar("1", "2026-02-01");
+    ratearDespesaIntegral(id);
+    mvc.perform(
+            put("/api/v1/plantios/" + id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(corpoEm(outraPropriedade)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.propriedadeId").value(outraPropriedade))
+        .andExpect(jsonPath("$.produtorId").value(produtor));
+    assertThat(jdbc.queryForObject("select propriedade_id from plantio where id=?", Long.class, id))
+        .isEqualTo(outraPropriedade);
+    assertRateioIntegral(id);
+  }
+
+  @Test
+  void deveRetornar404QuandoAlterarParaPropriedadeInexistente() throws Exception {
+    Number id = criar("1", "2026-02-01");
+    mvc.perform(
+            put("/api/v1/plantios/" + id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(corpoEm(Long.MAX_VALUE)))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.erro").value("NAO_ENCONTRADO"));
+  }
+
   @Test
   void deveProtegerAreaEEncerramentoQuandoSqlIgnorarService() throws Exception {
     Number id = criar("1", "2026-02-01");

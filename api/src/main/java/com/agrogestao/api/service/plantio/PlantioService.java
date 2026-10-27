@@ -57,14 +57,14 @@ public class PlantioService {
   @Transactional
   public PlantioResposta criar(PlantioRequisicao dto) {
     Plantio entidade = new Plantio();
-    preencher(entidade, dto);
+    preencher(entidade, dto, null);
     return resposta(repository.saveAndFlush(entidade));
   }
 
   @Transactional
   public PlantioResposta alterar(Long id, PlantioRequisicao dto) {
     Plantio entidade = encontrar(id);
-    preencher(entidade, dto);
+    preencher(entidade, dto, entidade.getPropriedade().getProdutor().getId());
     return resposta(repository.saveAndFlush(entidade));
   }
 
@@ -74,7 +74,8 @@ public class PlantioService {
         .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado."));
   }
 
-  private void preencher(Plantio entidade, PlantioRequisicao dto) {
+  /** produtorAtual é nulo na criação; na alteração, trava o plantio no mesmo produtor. */
+  private void preencher(Plantio entidade, PlantioRequisicao dto, Long produtorAtual) {
     if (dto.area().signum() <= 0)
       throw new RegraNegocioException("A área do plantio deve ser maior que zero.");
     if (dto.dataInicio().isAfter(LocalDate.now(relogio)))
@@ -89,6 +90,9 @@ public class PlantioService {
         propriedades
             .findById(dto.propriedadeId())
             .orElseThrow(() -> new RecursoNaoEncontradoException("Propriedade não encontrada."));
+    if (produtorAtual != null && !produtorAtual.equals(propriedade.getProdutor().getId()))
+      throw new RegraNegocioException(
+          "O plantio não pode ser transferido para propriedade de outro produtor.");
     Cultura cultura =
         culturas
             .findById(dto.culturaId())
