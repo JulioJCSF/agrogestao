@@ -1,5 +1,6 @@
 package com.agrogestao.api.model;
 
+import com.agrogestao.api.service.lancamento.DataColetaListener;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
@@ -11,7 +12,8 @@ import lombok.*;
 @NoArgsConstructor
 @Entity
 @Table(name = "venda")
-public class Venda extends EntidadeAuditada {
+@EntityListeners(DataColetaListener.class)
+public class Venda extends EntidadeAuditada implements Lancamento {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "produtor_id", nullable = false)
   private Produtor produtor;
@@ -26,8 +28,10 @@ public class Venda extends EntidadeAuditada {
   @Column(name = "data_fato", nullable = false)
   private LocalDate dataFato;
 
-  @Column(name = "data_coleta", nullable = false)
+  @Column(name = "data_coleta", nullable = false, updatable = false)
   private LocalDate dataColeta;
+
+  @Transient private boolean coletaAtribuida;
 
   @OneToMany(mappedBy = "venda", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<ItemVenda> itens = new ArrayList<>();

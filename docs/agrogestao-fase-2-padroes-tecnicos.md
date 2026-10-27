@@ -216,7 +216,7 @@ Todas as listas do contrato usam:
 {"itens": [], "pagina": 0, "tamanho": 20, "total": 0}
 ```
 
-`pagina` começa em zero; `tamanho` padrão 20, permitido de 1 a 100. Ordenação determinística por id. Valores fora dos limites respondem 400 `VALIDACAO`. Busca textual usa `busca`; filtros de intervalo usam `periodoInicio` e `periodoFim`. Datas são `AAAA-MM-DD`; instantes são ISO-8601 em UTC. O front exibe datas em dd/mm/aaaa. "Hoje" é `LocalDate.now(clock)` com o `Clock` de `RelogioConfig` em `America/Fortaleza`, e o Bean Validation (`@PastOrPresent` e afins) usa o mesmo relógio via `ClockProvider`. CPF usa `documento` com 11 dígitos; dinheiro usa número decimal no JSON e BigDecimal no Java.
+`pagina` começa em zero; `tamanho` padrão 20, permitido de 1 a 100. Ordenação determinística por id. Valores fora dos limites respondem 400 `VALIDACAO`. Busca textual usa `busca`; filtros de intervalo usam `periodoInicio` e `periodoFim`. Datas são `AAAA-MM-DD`; instantes são ISO-8601 em UTC. O front exibe datas em dd/mm/aaaa. "Hoje" é `LocalDate.now(clock)` com o `Clock` de `RelogioConfig` em `America/Fortaleza`, e o Bean Validation (`@PastOrPresent` e afins) usa o mesmo relógio via `ClockProvider`. Data do fato futura é regra violada: 422 `REGRA_NEGOCIO` no service (`LancamentoService`), nunca `@PastOrPresent` em `dataFato`, que daria 400; `data_coleta` é atribuída pela API na gravação e não muda na alteração. CPF usa `documento` com 11 dígitos; dinheiro usa número decimal no JSON e BigDecimal no Java.
 
 Essa paginação e as assinaturas compõem a proposta técnica da F13; revisão de uma pessoa do front é necessária antes do merge.
 
