@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.2
+Versão 1.6
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -83,7 +83,7 @@ Toda diária deve ter natureza declarada: paga ou familiar.
 **Origem:** RF24
 
 ### RN13 — Valoração da diária familiar
-À diária familiar aplica-se o valor de referência **vigente na data do fato**, copiado para o registro no momento do lançamento.
+À diária familiar aplica-se o valor de referência **vigente na data do fato**, copiado para o registro no momento do lançamento. Valor unitário informado no lançamento de diária familiar é ignorado: vale o da referência.
 **Origem:** RF26, DA07
 
 ### RN14 — Ausência de referência vigente
@@ -91,11 +91,15 @@ Não havendo valor de referência vigente para a data do fato, o lançamento de 
 **Origem:** RF25, RF26
 
 ### RN15 — Valor da diária paga
-A diária paga tem valor informado no lançamento, não herdado da referência — é desembolso efetivo, de valor conhecido.
+A diária paga tem valor informado no lançamento, não herdado da referência — é desembolso efetivo, de valor conhecido. Diária paga sem valor unitário é rejeitada.
 **Origem:** RF24
 
 ### RN16 — Geração de despesa
 Diária de natureza paga gera automaticamente uma despesa vinculada, de categoria "diária", com rateio integral ao plantio da diária. A despesa gerada não é editável diretamente: altera-se a diária, e a despesa acompanha.
+
+- O valor da diária é a quantidade de dias multiplicada pelo valor unitário, arredondado em duas casas, com a metade arredondada para cima (`HALF_UP`). É esse o valor total da despesa gerada.
+- A despesa gerada tem a mesma data do fato da diária.
+
 **Origem:** RF27, RF28, M01
 
 ### RN17 — Vigências não se sobrepõem
@@ -111,7 +115,7 @@ Cadastrar ou alterar valor de referência não altera diárias já lançadas.
 ## 4. Apuração
 
 ### RN19 — Custo de desembolso
-Custo de desembolso de um plantio no período é a soma dos valores rateados das despesas cuja data do fato caia no período.
+Custo de desembolso de um plantio no período é a soma dos valores rateados das despesas cuja data do fato caia no período. Despesa estornada (`RN11`) não entra; emissão já gravada não muda (`RN34`).
 **Origem:** RF34
 
 ### RN20 — Vedação de dupla contagem
@@ -134,6 +138,12 @@ Resultado = receita − custo de desembolso.
 
 ### RN24 — Período de apuração
 O período deriva do tipo de ciclo efetivo do plantio: ciclo longo apura por safra, ciclo curto por mês.
+
+- **Safra**, para a apuração, vai da data de início à data de encerramento do plantio; com o plantio aberto, até a data corrente.
+- **Mês** é o mês-calendário consultado, do primeiro ao último dia; sem mês informado, o mês corrente.
+- As duas pontas do período são inclusivas.
+- No relatório, vale o período informado na emissão (`RN31`), não o derivado do ciclo.
+
 **Origem:** RF38, DA05
 
 ### RN25 — Produção e venda são grandezas distintas — **DECIDIDA**
@@ -168,6 +178,11 @@ O saldo disponível é informativo. O sistema **não** impede venda de quantidad
 
 ### RN30 — Coerência de unidade
 A unidade de medida do item de venda deve ser a mesma da produção registrada para aquele plantio.
+
+- Sem produção registrada no plantio, vale a unidade da cultura do plantio.
+- A comparação ignora espaços nas pontas e diferença entre maiúsculas e minúsculas: "kg", "Kg" e " KG " são a mesma unidade.
+- O valor total do item é a quantidade multiplicada pelo valor unitário, arredondado em duas casas, com a metade arredondada para cima (`HALF_UP`). O valor total da venda é a soma dos totais dos itens já arredondados.
+
 **Origem:** RF31
 
 ---
@@ -176,6 +191,10 @@ A unidade de medida do item de venda deve ser a mesma da produção registrada p
 
 ### RN31 — Conteúdo mínimo do relatório
 Todo relatório emitido contém: identificação do produtor, período coberto, data de emissão, culturas produzidas, despesas, diárias, resultado e as ressalvas das RN32 e RN33.
+
+- Cada plantio do produtor é apurado no período informado na emissão, qualquer que seja o seu ciclo.
+- Período sem nenhum lançamento também gera relatório, com valores zerados e as duas ressalvas.
+
 **Origem:** RF40 a RF44
 
 ### RN32 — Ressalva de valor declarado
@@ -235,4 +254,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas nesta versão. Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Nenhuma regra segue pendente.
