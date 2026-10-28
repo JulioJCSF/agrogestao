@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.agrogestao.api.IntegracaoTest;
+import com.agrogestao.api.model.Perfil;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Instant;
 import org.junit.jupiter.api.AfterEach;
@@ -21,11 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** 2026-10-12T01:30Z é 22h30 de 11/10 em Fortaleza: em UTC, "amanhã" já seria hoje. */
 @Transactional
-@WithMockUser
+@WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
 class RelogioIT extends IntegracaoTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   @Autowired RelogioAjustavel relogio;
+
+  @BeforeEach
+  void criarLancador() {
+    new UsuariosTeste(jdbc, mvc).criar(Perfil.LANCAMENTO);
+  }
 
   @BeforeEach
   void fixarNoiteEmFortaleza() {

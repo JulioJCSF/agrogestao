@@ -6,10 +6,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.agrogestao.api.IntegracaoTest;
+import com.agrogestao.api.config.UsuariosTeste;
+import com.agrogestao.api.model.Perfil;
 import com.agrogestao.api.model.TipoCanal;
 import com.jayway.jsonpath.JsonPath;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -26,12 +29,17 @@ import org.springframework.transaction.annotation.Transactional;
  * então nenhuma asserção depende da contagem total.
  */
 @Transactional
-@WithMockUser
+@WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
 class ClienteIT extends IntegracaoTest {
   static final String PREFIXO = "Cliente Teste L09a";
 
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
+
+  @BeforeEach
+  void criarLancador() {
+    new UsuariosTeste(jdbc, mvc).criar(Perfil.LANCAMENTO);
+  }
 
   static String corpo(String nome, String tipoCanal) {
     return "{\"nome\":\"" + nome + "\",\"tipoCanal\":\"" + tipoCanal + "\"}";

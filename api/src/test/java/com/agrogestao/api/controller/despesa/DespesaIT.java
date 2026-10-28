@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.agrogestao.api.IntegracaoTest;
 import com.agrogestao.api.config.RelogioAjustavel;
+import com.agrogestao.api.config.UsuariosTeste;
+import com.agrogestao.api.model.Perfil;
 import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.time.*;
@@ -29,7 +31,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * CT018 precisa que o GET leia do banco, não do contexto de persistência. Limpeza no
  * {@code @AfterEach}.
  */
-@WithMockUser
+@WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
 class DespesaIT extends IntegracaoTest {
   static final String CATEGORIA_SISTEMA =
       "A categoria Diária é lançada automaticamente pela diária paga e não pode ser usada em"
@@ -39,6 +41,11 @@ class DespesaIT extends IntegracaoTest {
   @Autowired JdbcTemplate jdbc;
   @Autowired RelogioAjustavel relogio;
   Long autor, produtor, propriedade, vizinho, propriedadeVizinho, milho, adubo, diaria;
+
+  @BeforeEach
+  void criarLancador() {
+    new UsuariosTeste(jdbc, mvc).criar(Perfil.LANCAMENTO);
+  }
 
   @BeforeEach
   void preparar() {
@@ -70,6 +77,7 @@ class DespesaIT extends IntegracaoTest {
             "delete from propriedade where produtor_id in (?,?)",
             "delete from produtor where id in (?,?)")) jdbc.update(sql, produtores.toArray());
     jdbc.update("delete from usuario where id = ?", autor);
+    jdbc.update("delete from usuario where login = ?", UsuariosTeste.LANCAMENTO);
   }
 
   Long produtor(String nome, String cpf) {

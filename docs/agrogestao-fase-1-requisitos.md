@@ -29,6 +29,8 @@ Requisitos numerados e rastreáveis do sistema. Cada requisito funcional aponta 
 | RF04 | O sistema deve encerrar a sessão após período de inatividade | Média | Fase 0 |
 | RF05 | O sistema deve permitir ao administrador cadastrar e desativar usuários | Média | R4 |
 
+RF02 vale assim, por decisão de 27/10: CONSULTA só lê (todo GET da API); LANCAMENTO lê e grava (POST, PUT, DELETE e PATCH), inclusive as configurações (culturas, categorias e valor de referência), o encerramento, o estorno e a emissão de relatório; ADMIN faz tudo, e só ele acessa `/usuarios`, inclusive para leitura. Perfil e situação do usuário são conferidos a cada requisição; desativar corta o acesso imediatamente. O autor de cada registro (RF03) é o usuário logado; fora de uma requisição, como na inicialização, é o administrador.
+
 O produtor **não** é usuário. Não há requisito de login, cadastro ou recuperação de senha para ele.
 
 ---

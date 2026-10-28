@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.agrogestao.api.IntegracaoTest;
+import com.agrogestao.api.config.UsuariosTeste;
 import com.agrogestao.api.dto.*;
 import com.jayway.jsonpath.JsonPath;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -219,7 +220,7 @@ class ContratoIT extends IntegracaoTest {
   }
 
   @Test
-  @WithMockUser
+  @WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
   void deveRetornarErroPadraoQuandoModuloAindaForEsqueleto() throws Exception {
     mvc.perform(get("/api/v1/painel"))
         .andExpect(status().isNotImplemented())
@@ -232,7 +233,7 @@ class ContratoIT extends IntegracaoTest {
   }
 
   @Test
-  @WithMockUser
+  @WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
   void deveValidarCamposAninhadosQuandoContratoDeVendaForInvalido() throws Exception {
     mvc.perform(
             post("/api/v1/vendas")

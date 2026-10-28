@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.agrogestao.api.IntegracaoTest;
+import com.agrogestao.api.config.UsuariosTeste;
+import com.agrogestao.api.model.Perfil;
 import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -20,12 +22,17 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-@WithMockUser
+@WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
 class ValorReferenciaDiariaIT extends IntegracaoTest {
   static final String URL = "/api/v1/valores-referencia-diaria";
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   Long autor;
+
+  @BeforeEach
+  void criarLancador() {
+    new UsuariosTeste(jdbc, mvc).criar(Perfil.LANCAMENTO);
+  }
 
   @BeforeEach
   void preparar() {

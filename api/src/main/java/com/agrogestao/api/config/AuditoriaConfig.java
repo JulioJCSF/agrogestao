@@ -6,18 +6,16 @@ import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Auditor provisório da F11. A F04b substituirá pelo usuário do token. */
+/**
+ * Auditoria das entidades (RNF07). O autor é o usuário do token; fora de requisição, o admin do
+ * {@code ADMIN_LOGIN}. As regras completas estão em {@link AutorDoRegistro}.
+ */
 @Configuration
 @EnableJpaAuditing
 public class AuditoriaConfig {
   @Bean
-  public AuditorAware<Long> auditorInicial(
+  public AuditorAware<Long> autorDoRegistro(
       JdbcTemplate jdbc, @Value("${ADMIN_LOGIN}") String login) {
-    // JDBC evita disparar um flush JPA recursivo durante os callbacks de auditoria.
-    return () ->
-        jdbc
-            .query("select id from usuario where login = ?", (rs, row) -> rs.getLong("id"), login)
-            .stream()
-            .findFirst();
+    return new AutorDoRegistro(jdbc, login);
   }
 }
