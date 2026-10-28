@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.agrogestao.api.IntegracaoTest;
 import com.agrogestao.api.config.RelogioAjustavel;
+import com.agrogestao.api.config.UsuariosTeste;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import jakarta.persistence.EntityManager;
@@ -49,6 +50,8 @@ class LancamentoIT extends IntegracaoTest {
 
   @BeforeEach
   void prepararMassa() {
+    // Um dos testes roda com @WithMockUser: a massa gravada aqui precisa do autor cadastrado.
+    new UsuariosTeste(jdbc, mvc).criar(Perfil.LANCAMENTO);
     relogio.fixar(Instant.parse("2026-10-12T01:30:00Z"));
     produtor = new Produtor();
     produtor.setNome("Produtor Teste Relatório");
@@ -149,7 +152,7 @@ class LancamentoIT extends IntegracaoTest {
    * com {@code dataColeta} = 2026-10-11.
    */
   @Test
-  @WithMockUser
+  @WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
   void deveIgnorarDataColetaQuandoVierNoCorpoDaRequisicao() throws Exception {
     mvc.perform(
             post("/api/v1/plantios/" + plantio.getId() + "/producoes")

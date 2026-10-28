@@ -292,7 +292,7 @@ Códigos do campo `erro`:
 | `ERRO_INTERNO` | 500 | Erro não tratado. Sem stack trace na resposta; o detalhe vai para o log |
 | `NAO_IMPLEMENTADO` | 501 | Esqueleto da F13, via ApiNaoImplementadaException e o mesmo advice |
 
-Tratamento centralizado com `@RestControllerAdvice` (`exception/ApiExceptionHandler`). Nenhum `try/catch` devolvendo erro direto no Controller. Para sinalizar erro, o Service lança `RegraNegocioException` ou `RecursoNaoEncontradoException` com a mensagem para o operador. Os 401 e 403 do Spring Security saem no mesmo formato pelo entry point e pelo access denied handler configurados em `SecurityConfig`.
+Tratamento centralizado com `@RestControllerAdvice` (`exception/ApiExceptionHandler`). Nenhum `try/catch` devolvendo erro direto no Controller. Para sinalizar erro, o Service lança `RegraNegocioException` ou `RecursoNaoEncontradoException` com a mensagem para o operador. Os 401 e 403 do Spring Security saem no mesmo formato pelo entry point e pelo access denied handler configurados em `SecurityConfig`. A autorização por perfil (RF02) também fica centralizada na `SecurityConfig`, por método HTTP e caminho, sem anotação nos controllers: sem token, 401 `NAO_AUTENTICADO`; perfil sem permissão, 403 `ACESSO_NEGADO`. O autor (`criado_por`) é o usuário do token (RNF07).
 
 ### Documentação
 

@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.agrogestao.api.IntegracaoTest;
 import com.agrogestao.api.config.RelogioAjustavel;
+import com.agrogestao.api.config.UsuariosTeste;
+import com.agrogestao.api.model.Perfil;
 import com.jayway.jsonpath.JsonPath;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -23,13 +25,18 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-@WithMockUser
+@WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
 class PlantioIT extends IntegracaoTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   @Autowired jakarta.persistence.EntityManager entityManager;
   @Autowired RelogioAjustavel relogio;
   Long autor, produtor, propriedade, cultura;
+
+  @BeforeEach
+  void criarLancador() {
+    new UsuariosTeste(jdbc, mvc).criar(Perfil.LANCAMENTO);
+  }
 
   @BeforeEach
   void preparar() {

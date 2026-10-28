@@ -13,14 +13,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.agrogestao.api.IntegracaoTest;
+import com.agrogestao.api.config.UsuariosTeste;
 import com.agrogestao.api.model.*;
+import com.agrogestao.api.model.Perfil;
 import com.agrogestao.api.repository.*;
 import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -28,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Integração da API de produtor com PostgreSQL efêmero. CPFs sintéticos, com DV válido. */
 @Transactional
-@WithMockUser
+@WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
 class ProdutorIT extends IntegracaoTest {
 
   private static final String CPF_A = "99900001079";
@@ -48,6 +52,12 @@ class ProdutorIT extends IntegracaoTest {
   @Autowired private ProducaoRepository producaoRepository;
   @Autowired private CategoriaDespesaRepository categoriaDespesaRepository;
   @Autowired private DespesaRepository despesaRepository;
+  @Autowired private JdbcTemplate jdbc;
+
+  @BeforeEach
+  void criarLancador() {
+    new UsuariosTeste(jdbc, mockMvc).criar(Perfil.LANCAMENTO);
+  }
 
   private static String corpo(
       String nome, String documento, String consentimentoEm, boolean ativo) {
