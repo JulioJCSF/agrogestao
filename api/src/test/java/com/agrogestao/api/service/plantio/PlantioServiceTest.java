@@ -31,6 +31,9 @@ class PlantioServiceTest {
 
   @BeforeEach
   void preparar() {
+    when(repo.buscarParaAtualizar(anyLong())).thenAnswer(inv -> repo.findById(inv.getArgument(0)));
+    when(culturas.buscarParaAtualizar(anyLong()))
+        .thenAnswer(inv -> culturas.findById(inv.getArgument(0)));
     Produtor produtor = new Produtor();
     ReflectionTestUtils.setField(produtor, "id", 3L);
     ReflectionTestUtils.setField(propriedade, "id", 1L);
