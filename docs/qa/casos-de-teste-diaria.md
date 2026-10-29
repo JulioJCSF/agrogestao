@@ -1,6 +1,6 @@
 # AgroGestão — Casos de Teste: Diária e Valor de Referência (CT021–CT031)
 
-Versão 1.0
+Versão 1.1
 
 Especificação dos casos de diária e valor de referência no padrão da QA 3.3. Destrava L07 e documenta o que a L06 já automatizou (CT029 e CT030).
 
@@ -462,11 +462,17 @@ O passo 4 garante que o teste não passa por acidente com um serviço que nunca 
 ## Pontos para revisar
 
 1. **Não existe `diaria.valor_total`.** A tabela grava só `quantidade_dias` e `valor_unitario`; o total aparece em `DiariaResposta.valorTotal` e na despesa gerada. Para a paga, o total gravado na despesa é a fonte de verdade da apuração. Para a familiar, a apuração recalcula `dias × valor` a cada consulta — o resultado só não muda porque as duas parcelas estão gravadas e o arredondamento é fixo (decisão 7). Se o arredondamento mudar um dia, as familiares antigas mudam junto. Avaliar uma coluna `valor_total` em migration nova.
-2. **Troca de natureza no `PUT`.** `DiariaRequisicao` aceita `natureza` na alteração. Nada define o que acontece ao trocar uma paga para familiar (a despesa gerada some?) ou o contrário. Este documento não testa a troca; recomendação: rejeitar com 422 e orientar a excluir e lançar de novo.
-3. **Diária paga em período já emitido.** Alterar ou excluir a diária paga altera ou exclui a despesa gerada (CT027). Se essa despesa já estiver em relatório emitido, a RN11 proíbe a exclusão e manda estornar. A relação entre a RN11 e a RN16 não está escrita; a A03b precisa decidir se a diária também fica bloqueada.
-4. **CT028 depende da L04b.** Os passos 3 a 5 usam `PUT`, `DELETE` e `POST` de despesa, que são da L04b. Se a L07 fechar antes, esses passos ficam pendentes até a L04b, sem mudar o CT.
+2. **Troca de natureza no `PUT`.** Resolvido em 29/10/2026 pelo solicitante na L07: rejeitar com 422 e orientar excluir/registrar novamente, em ambas as direções. Registrado na RN12 e automatizado em `DiariaIT`.
+3. **Diária paga em período já emitido.** A L07 respeita a RN11: se a despesa gerada estiver em período emitido para o produtor, excluir ou deslocar a data da diária retorna 422, preservando diária, despesa, rateio e snapshot. Fora do período emitido a exclusão é permitida. Alteração de quantidade/valor continua permitida, sem tocar no snapshot (CT053); estorno permanece na A03b. `DiariaIT.deveRecusarExclusaoQuandoDespesaDaDiariaEstiverEmPeriodoEmitido` cobre também a sequência PUT da data → DELETE.
+4. **CT028 e L04b.** A L07 antecipa o bloqueio RN16 no PUT/DELETE de despesa gerada, para o CT028 passar completo. O POST manual em categoria de sistema já era bloqueado pela L04a. Listagens e exclusão de despesa manual continuam na L04b; DELETE manual permanece 501.
 5. **Descrição da despesa gerada.** `despesa.descricao` é obrigatória e nenhuma regra diz qual texto a despesa gerada recebe. Os casos não verificam o texto; sugestão: "Diária paga de dd/mm/aaaa".
-6. **Zero e negativo em dias e valor.** O DTO não tem `@Positive` em `quantidadeDias` nem em `valorUnitario`. As convenções propõem 422, como a área (Q00a) e o valor da referência (L06), mas nenhum CT da matriz cobre o caso; as restrições `ck_diaria_qtd` e `ck_diaria_valor` seguram no banco, onde sairiam como 422 com mensagem genérica.
+6. **Zero e negativo em dias e valor.** A L07 valida no serviço, com 422 e mensagem clara, como na área e na referência. `DiariaIT` cobre dias e valor pago não positivos, total pago que arredonda a zero e total que excede NUMERIC(12,2). O valor informado na familiar é ignorado; o aplicado é o da referência.
 7. **CT029 e CT030 frente à RN17.** Os testes existentes cobrem a regra com os mesmos valores deste documento. Duas observações, sem mudar os testes: o CT030 não conta as linhas depois das seis rejeições (o 422 vem do serviço antes do `save`, mas a contagem tornaria isso explícito); e a referência aberta já existente contra um período novo anterior a ela só é coberta de passagem, no teste de dia único.
 8. **Referências da migration em qualquer banco.** A migration de dados iniciais grava referências de 2025 e de 2026 em diante em qualquer ambiente, inclusive no de teste. Por isso os casos de integração usam 2024. Vale tirar esses exemplos das migrations (por migration nova, já que a aplicada não se edita) e deixá-los na massa de desenvolvimento (`db/dev`), como a F12 fez com os produtores, para os testes poderem usar datas atuais.
-9. **Mensagens de erro.** As mensagens de CT024, CT025 e CT028 são propostas. O teste verifica `status`, `erro` e `campos`; a mensagem exata é confirmada na L07 e na L04b.
+9. **Mensagens de erro.** A L07 confirma as mensagens de referência ausente, valor pago ausente e proteção da despesa. Os testes verificam status, campos e orientação ao operador.
+
+## Automação da L07
+
+- `DiariaIT`: CT021/022/026/027/028, formatos e precisão, auditoria/coleta, paginação por plantio, alteração/exclusão e rollback de criação/alteração/exclusão. Exercita as constraints de natureza, referência obrigatória e unicidade de despesa por diária por SQL direto. Inclui concorrência com encerramento (RN03/RN04).
+- `DiariaServiceTest`: CT023/024/025/031, valores de referência nas bordas e HALF_UP com os valores desta especificação; a consulta lê o valor copiado, nunca recalcula pela referência atual.
+- Na familiar, alterar somente os dias preserva valor/referência; corrigir a data reaplica a referência da nova data. O valor informado no corpo continua ignorado. Registrado na RN13.

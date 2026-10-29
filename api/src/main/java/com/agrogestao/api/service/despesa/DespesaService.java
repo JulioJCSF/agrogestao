@@ -53,7 +53,7 @@ public class DespesaService {
   @Transactional
   public DespesaResposta alterar(Long id, DespesaRequisicao dto) {
     Despesa despesa = encontrar(id);
-    // TODO(L04b): despesa com diaria_id (gerada pela diária paga) não é editável → 422 (RN16).
+    exigirDespesaManual(despesa);
     // TODO(A03b): despesa com data do fato em período já emitido → bloqueio da RN11.
     Vinculos vinculos = validar(dto);
     Set<Long> plantiosAtuais =
@@ -66,6 +66,18 @@ public class DespesaService {
       ratear(despesa, dto.valorTotal(), vinculos.plantios());
     }
     return resposta(repository.saveAndFlush(despesa));
+  }
+
+  public void excluir(Long id) {
+    exigirDespesaManual(encontrar(id));
+    // A L07 protege a RN16; a exclusão de despesa manual continua na L04b.
+    throw new ApiNaoImplementadaException();
+  }
+
+  private static void exigirDespesaManual(Despesa despesa) {
+    if (despesa.getDiaria() != null)
+      throw new RegraNegocioException(
+          "Esta despesa foi gerada por uma diária paga. Altere ou exclua a diária.");
   }
 
   private Despesa encontrar(Long id) {

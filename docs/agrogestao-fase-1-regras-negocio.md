@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.8
+Versão 1.9
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -82,6 +82,8 @@ Percentual e valor rateado são calculados uma vez, no lançamento, e gravados. 
 Excluir uma despesa remove todos os seus rateios. Despesa já incluída em relatório emitido não pode ser excluída, apenas estornada: a própria despesa é marcada como estornada (`despesa.estornada` no DER), sem lançamento de ajuste à parte. O relatório já emitido não muda (`RN34`).
 **Origem:** RF45, DA05
 
+Na diária paga, a proteção também impede trocar a data do fato quando a despesa gerada está em período já emitido. Assim não é possível deslocar a diária para fora do período e excluir a despesa indiretamente. Valor e quantidade continuam corrigíveis, sem regravar o relatório emitido.
+
 ---
 
 ## 3. Diária e valor de referência
@@ -90,9 +92,13 @@ Excluir uma despesa remove todos os seus rateios. Despesa já incluída em relat
 Toda diária deve ter natureza declarada: paga ou familiar.
 **Origem:** RF24
 
+A natureza não pode ser trocada na alteração. A API responde 422, orientando excluir e registrar outra diária com a natureza correta. Decisão do solicitante na L07 em 29/10/2026, conforme recomendação da Q00c.
+
 ### RN13 — Valoração da diária familiar
 À diária familiar aplica-se o valor de referência **vigente na data do fato**, copiado para o registro no momento do lançamento. Valor unitário informado no lançamento de diária familiar é ignorado: vale o da referência.
 **Origem:** RF26, DA07
+
+Ao corrigir somente a quantidade de dias, preservam-se o valor unitário e a referência copiados. Corrigir a data do fato reaplica a referência vigente na nova data; o valor enviado pelo cliente continua ignorado. Isso concilia a correção da data com a preservação histórica da RN18.
 
 ### RN14 — Ausência de referência vigente
 Não havendo valor de referência vigente para a data do fato, o lançamento de diária familiar é rejeitado, com mensagem orientando o cadastro da referência.

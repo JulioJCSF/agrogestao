@@ -245,6 +245,8 @@ No PowerShell, use `.\mvnw.cmd` e coloque parâmetros `-D` entre aspas.
 
 Surefire executa classes `*Test`; Failsafe executa `*IT` no `verify`. A base `IntegracaoTest` importa `PostgresTesteConfig`, usa `@ServiceConnection` e a imagem `postgres:17-alpine`. O perfil `test` define os placeholders sintéticos do admin e ignora o `.env`. Os testes não alteram o banco local.
 
+A API de diárias (L07) já registra diárias pagas/familiares, sincroniza despesa e rateio e protege o histórico. Regras, limites e testes CT021–028/CT031 estão em [API de diária](docs/agrogestao-l07-diaria.md). As telas da L08 continuam na própria issue.
+
 ### Verificar o front-end
 
 Em `web/`, com Node 22:

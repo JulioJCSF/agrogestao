@@ -71,7 +71,7 @@ public class PlantioService {
 
   @Transactional
   public PlantioResposta alterar(Long id, PlantioRequisicao dto) {
-    Plantio entidade = encontrar(id);
+    Plantio entidade = encontrarParaAtualizar(id);
     preencher(entidade, dto, entidade.getPropriedade().getProdutor().getId());
     return resposta(repository.saveAndFlush(entidade));
   }
@@ -82,7 +82,7 @@ public class PlantioService {
    */
   @Transactional
   public PlantioResposta encerrar(Long id, EncerramentoPlantioRequisicao dto) {
-    Plantio entidade = encontrar(id);
+    Plantio entidade = encontrarParaAtualizar(id);
     LocalDate encerramento = dto.dataEncerramento();
     if (entidade.getDataEncerramento() != null)
       throw new RegraNegocioException(
@@ -123,6 +123,12 @@ public class PlantioService {
   private Plantio encontrar(Long id) {
     return repository
         .findById(id)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado."));
+  }
+
+  private Plantio encontrarParaAtualizar(Long id) {
+    return repository
+        .buscarParaAtualizar(id)
         .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado."));
   }
 
