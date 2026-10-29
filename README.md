@@ -113,7 +113,9 @@ Abra o endereço mostrado pelo Vite. Na tela de login, **Explorar prévia com da
 
 Para usar a prévia estática, copie `web/.env.example` para `web/.env.local` e inicie o Vite. Com `VITE_USAR_MOCK=true`, o botão **Explorar prévia** mostra inclusive a interface de administração, sem autenticar ninguém. Para solicitar dados reais, use `VITE_USAR_MOCK=false` e reinicie o Vite. O login e as operações reais dependem da API; as telas usam `web/src/services/registroService.js`, e o cliente Axios usa `/api/v1`, com proxy local para `http://localhost:8080`.
 
-O contrato do MVP está publicado no Swagger pela F13: DTOs, exemplos, paginação e endpoints. Login, propriedades, culturas e categorias de despesa têm implementação real; os demais módulos respondem `501 NAO_IMPLEMENTADO` até suas próprias issues. O front usa os nomes e URLs desse contrato e mostra a indisponibilidade sem substituir uma sessão real pela prévia. Cálculos de resultado, saldo, rateio e relatório pertencem à API. Os números da prévia são exemplos estáticos.
+O contrato do MVP está publicado no Swagger pela F13: DTOs, exemplos, paginação e endpoints. Já têm implementação real: autenticação e permissões, produtores, propriedades, culturas, plantios (incluindo encerramento), produção, categorias, lançamento/alteração/detalhe de despesas com rateio, referência de diária e clientes. Os endpoints ainda pendentes respondem `501 NAO_IMPLEMENTADO` até suas próprias issues. O front usa os nomes e URLs desse contrato e mostra a indisponibilidade sem substituir uma sessão real pela prévia. Cálculos de resultado, saldo, rateio e relatório pertencem à API. Os números da prévia são exemplos estáticos.
+
+Na produção, omitir `unidadeMedida` usa a unidade da cultura do plantio; uma unidade informada deve ser equivalente a ela (RN38). Testes e comportamento: [casos de produção](docs/qa/casos-de-teste-producao.md).
 
 ## Documentação do projeto
 

@@ -6,7 +6,7 @@ Transforma regra de negócio em cobertura de teste antes do código chegar.
 
 **Documentos relacionados**
 
-- `agrogestao-fase-1-regras-negocio.md` — as 37 regras que este plano precisa cobrir
+- `agrogestao-fase-1-regras-negocio.md` — as 38 regras que este plano precisa cobrir
 - `agrogestao-fase-1-requisitos.md` — requisitos de origem
 - `agrogestao-fase-2-der.md` — restrições que o banco garante e as que ficam no serviço
 - `agrogestao-fase-2-padroes-tecnicos.md` — seção 2.6, o que trava um PR
@@ -107,6 +107,7 @@ Prioridade: **P1** falha em silêncio ou afeta o documento entregue ao produtor 
 | RN35 data do fato não futura | RF17 | CT055, CT056 | API | P3 |
 | RN36 data de coleta pelo sistema | RF17 | CT057 | Integração | P2 |
 | RN37 consentimento para emissão | RF50 | CT058, CT059 | API | P2 |
+| RN38 unidade da produção | RF15, RF16 | CT060, CT061 | Integração | P2 |
 
 Quinze regras em P1. É a suíte que roda a cada PR.
 

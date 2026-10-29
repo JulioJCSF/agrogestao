@@ -210,6 +210,8 @@ Recurso aninhado só quando o filho não existe sem o pai. Produtor existe sozin
 
 ### Paginação e formatos
 
+**Produção (L01/RN38):** `unidadeMedida` pode ser omitida para receber a unidade da cultura do plantio. Quando informada, deve corresponder à da cultura, ignorando espaços nas pontas e caixa (422 se diferente); a resposta usa a grafia da cultura. Unidade em branco ou acima de 10 caracteres retorna 400. A unidade da cultura e a troca de cultura no plantio não podem invalidar produções existentes. Quantidade não positiva retorna 422; quantidade ausente ou fora de `NUMERIC(12,3)` retorna 400. Nenhuma quantidade histórica é convertida.
+
 Todas as listas do contrato usam:
 
 ```json

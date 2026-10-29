@@ -4,6 +4,7 @@ import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.Cultura;
 import com.agrogestao.api.repository.CulturaRepository;
+import com.agrogestao.api.repository.ProducaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CulturaService {
   private final CulturaRepository culturaRepository;
+  private final ProducaoRepository producoes;
 
   public PaginaResposta<CulturaResposta> listar(String busca, PaginacaoConsulta consulta) {
     return PaginaResposta.de(
@@ -35,9 +37,16 @@ public class CulturaService {
 
   @Transactional
   public CulturaResposta alterar(Long id, CulturaRequisicao dto) {
-    Cultura entidade = encontrar(id);
+    Cultura entidade =
+        culturaRepository
+            .buscarParaAtualizar(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Cultura não encontrada."));
 
     validarNome(dto.nome().trim(), id);
+    if (producoes.existsByPlantioCulturaId(id)
+        && !entidade.getUnidadeMedida().trim().equalsIgnoreCase(dto.unidadeMedida().trim()))
+      throw new RegraNegocioException(
+          "A unidade da cultura não pode mudar porque já há produção registrada.");
     preencher(entidade, dto);
     return resposta(culturaRepository.saveAndFlush(entidade));
   }
