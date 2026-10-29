@@ -9,7 +9,7 @@ import java.time.*;
 @Schema(
     description = "Resposta do contrato do MVP",
     example =
-        "{\"id\":1,\"plantioId\":1,\"valorReferenciaDiariaId\":1,\"natureza\":\"PAGA\",\"quantidadeDias\":1.25,\"valorUnitario\":80,\"valorTotal\":100.25,\"dataFato\":\"2026-03-01\",\"dataColeta\":\"2026-03-02\"}")
+        "{\"id\":1,\"plantioId\":1,\"valorReferenciaDiariaId\":null,\"natureza\":\"PAGA\",\"quantidadeDias\":1.25,\"valorUnitario\":80,\"valorTotal\":100.00,\"dataFato\":\"2026-03-01\",\"dataColeta\":\"2026-03-02\"}")
 public record DiariaResposta(
     Long id,
     Long plantioId,

@@ -106,7 +106,7 @@ class PlantioServiceTest {
     Plantio plantio = new Plantio();
     plantio.setPropriedade(propriedade);
     plantio.setDataEncerramento(LocalDate.of(2026, 6, 30));
-    when(repo.findById(4L)).thenReturn(Optional.of(plantio));
+    when(repo.buscarParaAtualizar(4L)).thenReturn(Optional.of(plantio));
     var resposta = service.alterar(4L, entrada("3.125", LocalDate.of(2026, 6, 30), null));
     assertThat(resposta.dataEncerramento()).isEqualTo(LocalDate.of(2026, 6, 30));
     assertThat(resposta.situacao()).isEqualTo(SituacaoPlantio.ENCERRADO);
@@ -118,7 +118,7 @@ class PlantioServiceTest {
     Plantio plantio = new Plantio();
     plantio.setPropriedade(propriedade);
     plantio.setDataEncerramento(LocalDate.of(2026, 6, 30));
-    when(repo.findById(4L)).thenReturn(Optional.of(plantio));
+    when(repo.buscarParaAtualizar(4L)).thenReturn(Optional.of(plantio));
     assertThatThrownBy(() -> service.alterar(4L, entrada("1", LocalDate.of(2026, 7, 1), null)))
         .isInstanceOf(RegraNegocioException.class)
         .hasMessageContaining("01/07/2026");
@@ -145,7 +145,7 @@ class PlantioServiceTest {
     propriedadeDe(5L, 7L);
     Plantio plantio = new Plantio();
     plantio.setPropriedade(propriedade);
-    when(repo.findById(4L)).thenReturn(Optional.of(plantio));
+    when(repo.buscarParaAtualizar(4L)).thenReturn(Optional.of(plantio));
     assertThatThrownBy(() -> service.alterar(4L, entradaEm(5L)))
         .isInstanceOf(RegraNegocioException.class)
         .hasMessage("O plantio não pode ser transferido para propriedade de outro produtor.");
@@ -158,7 +158,7 @@ class PlantioServiceTest {
     Propriedade mesmoProdutor = propriedadeDe(6L, 3L);
     Plantio plantio = new Plantio();
     plantio.setPropriedade(propriedade);
-    when(repo.findById(4L)).thenReturn(Optional.of(plantio));
+    when(repo.buscarParaAtualizar(4L)).thenReturn(Optional.of(plantio));
     var resposta = service.alterar(4L, entradaEm(6L));
     assertThat(plantio.getPropriedade()).isSameAs(mesmoProdutor);
     assertThat(resposta.propriedadeId()).isEqualTo(6L);
@@ -212,7 +212,7 @@ class PlantioServiceTest {
     plantio.setCultura(cultura);
     plantio.setArea(BigDecimal.ONE);
     plantio.setDataInicio(inicio);
-    when(repo.findById(4L)).thenReturn(Optional.of(plantio));
+    when(repo.buscarParaAtualizar(4L)).thenReturn(Optional.of(plantio));
     return plantio;
   }
 
