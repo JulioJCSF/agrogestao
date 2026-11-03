@@ -4,6 +4,7 @@ import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.Cultura;
 import com.agrogestao.api.repository.CulturaRepository;
+import com.agrogestao.api.repository.ItemVendaRepository;
 import com.agrogestao.api.repository.ProducaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CulturaService {
   private final CulturaRepository culturaRepository;
   private final ProducaoRepository producoes;
+  private final ItemVendaRepository itensVenda;
 
   public PaginaResposta<CulturaResposta> listar(String busca, PaginacaoConsulta consulta) {
     return PaginaResposta.de(
@@ -43,7 +45,8 @@ public class CulturaService {
             .orElseThrow(() -> new RecursoNaoEncontradoException("Cultura não encontrada."));
 
     validarNome(dto.nome().trim(), id);
-    if (producoes.existsByPlantioCulturaId(id)
+    // RN38: item de venda também fixa a unidade, mesmo sem produção (L09b).
+    if ((producoes.existsByPlantioCulturaId(id) || itensVenda.existsByPlantioCulturaId(id))
         && !entidade.getUnidadeMedida().trim().equalsIgnoreCase(dto.unidadeMedida().trim()))
       throw new RegraNegocioException(
           "A unidade da cultura não pode mudar porque já há produção registrada.");
