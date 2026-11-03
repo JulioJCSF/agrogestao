@@ -39,21 +39,20 @@ import org.springframework.web.bind.annotation.*;
 public class DespesaController {
   private final DespesaService service;
 
-  @ApiResponse(
-      responseCode = "501",
-      description = "Listagem pertence a L04b",
-      content = @Content(schema = @Schema(implementation = ErroResposta.class)))
   @GetMapping("/api/v1/despesas")
   @Operation(
       summary = "Lista despesas",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description =
+          "Filtros opcionais por produtor e por período da data do fato, com as bordas incluídas."
+              + " Rateios lidos como gravados (RN10). Estornadas e geradas por diária aparecem,"
+              + " com estornada e diariaId.")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public PaginaResposta<DespesaResposta> listar(
       @RequestParam(required = false) Long produtorId,
       @RequestParam(required = false) LocalDate periodoInicio,
       @RequestParam(required = false) LocalDate periodoFim,
       @Valid @ModelAttribute PaginacaoConsulta consulta) {
-    throw new ApiNaoImplementadaException();
+    return service.listar(produtorId, periodoInicio, periodoFim, consulta);
   }
 
   @PostMapping("/api/v1/despesas")
@@ -96,36 +95,32 @@ public class DespesaController {
     return service.alterar(id, dto);
   }
 
-  @ApiResponse(
-      responseCode = "501",
-      description = "Exclusão pertence a L04b",
-      content = @Content(schema = @Schema(implementation = ErroResposta.class)))
   @DeleteMapping("/api/v1/despesas/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(
-      summary = "Exclui despesas",
+      summary = "Exclui despesa",
       description =
-          "Despesa gerada por diária é recusada com 422 (RN16). Exclusão de despesa manual permanece na L04b (501).")
+          "Remove a despesa manual e os rateios dela (RN11). Despesa gerada por diária é recusada"
+              + " com 422 (RN16).")
   @ApiResponse(responseCode = "204", description = "Operação sem corpo")
   public void excluir(@PathVariable Long id) {
     service.excluir(id);
   }
 
-  @ApiResponse(
-      responseCode = "501",
-      description = "Consulta por plantio pertence a L04b",
-      content = @Content(schema = @Schema(implementation = ErroResposta.class)))
   @GetMapping("/api/v1/plantios/{plantioId}/despesas")
   @Operation(
       summary = "Lista os valores rateados ao plantio",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description =
+          "Uma linha por despesa rateada ao plantio, com percentual e valor rateado gravados, nunca"
+              + " recalculados (RF23, RN10). Período opcional sobre a data do fato, com as bordas"
+              + " incluídas. Estornadas aparecem com estornada.")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public PaginaResposta<DespesaPlantioResposta> listarPorPlantio(
       @PathVariable Long plantioId,
       @RequestParam(required = false) LocalDate periodoInicio,
       @RequestParam(required = false) LocalDate periodoFim,
       @Valid @ModelAttribute PaginacaoConsulta consulta) {
-    throw new ApiNaoImplementadaException();
+    return service.listarPorPlantio(plantioId, periodoInicio, periodoFim, consulta);
   }
 
   @ApiResponse(
