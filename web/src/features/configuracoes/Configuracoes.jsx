@@ -11,7 +11,7 @@ import {
 } from '../../components/ui.jsx'
 
 export function Configuracoes() {
-  const { data, save } = useData()
+  const { data, save, remove } = useData()
   const { openModal, notify, confirm } = useOutletContext()
   const { canWrite, isAdmin } = usePerfil()
   const [tab, setTab] = useState('culturas')
@@ -130,14 +130,34 @@ export function Configuracoes() {
                       </td>
                       <td>
                         {canWrite && !row.system && (
-                          <button
-                            type="button"
-                            className="text-button"
-                            data-testid={`edit-category-${row.id}`}
-                            onClick={() => openModal('category', row)}
-                          >
-                            Editar
-                          </button>
+                          <div className="row-actions">
+                            <button
+                              type="button"
+                              className="text-button"
+                              data-testid={`edit-category-${row.id}`}
+                              onClick={() => openModal('category', row)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="text-button danger"
+                              data-testid={`delete-category-${row.id}`}
+                              onClick={() =>
+                                confirm({
+                                  title: 'Excluir categoria?',
+                                  description: `Excluir a categoria ${row.name}? Categorias já usadas em despesas não podem ser excluídas.`,
+                                  action: 'Excluir',
+                                  onConfirm: async () => {
+                                    await remove('categories', row.id)
+                                    notify('Categoria excluída.')
+                                  },
+                                })
+                              }
+                            >
+                              Excluir
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

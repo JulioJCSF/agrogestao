@@ -1,4 +1,4 @@
-// Page Object de Configurações (QA 3.4). Por enquanto só a aba Culturas (C07).
+// Page Object de Configurações (QA 3.4): abas Culturas (C07) e Categorias de despesa (L12).
 export class ConfiguracoesPage {
   constructor(page) {
     this.page = page
@@ -73,5 +73,68 @@ export class ConfiguracoesPage {
   }
   async cancelar() {
     await this.campo('cancel-modal').click()
+  }
+
+  async abrirCadastro() {
+    await this.campo('add-setting').click()
+  }
+  async cadastrarCategoria(nome) {
+    await this.abrirCadastro()
+    await this.campo('field-name').fill(nome)
+    await this.campo('save-modal').click()
+  }
+  async abrirEdicaoCategoria(id) {
+    await this.campo(`edit-category-${id}`).click()
+  }
+  async editarCategoria(id, nome) {
+    await this.abrirEdicaoCategoria(id)
+    await this.campo('field-name').fill(nome)
+    await this.campo('save-modal').click()
+  }
+  /** Só abre o diálogo de confirmação. */
+  async pedirExclusaoCategoria(id) {
+    await this.campo(`delete-category-${id}`).click()
+  }
+  async excluirCategoria(id) {
+    await this.pedirExclusaoCategoria(id)
+    await this.campo('confirmacao-confirmar').click()
+  }
+  linhaCategoria(id) {
+    return this.campo(`category-row-${id}`)
+  }
+  linhasDeCategoria() {
+    return this.page.locator('[data-testid^="category-row-"]')
+  }
+  async idDaCategoria(nome) {
+    const testId = await this.linhasDeCategoria()
+      .filter({ has: this.page.getByText(nome, { exact: true }) })
+      .getAttribute('data-testid')
+    return Number(testId.replace('category-row-', ''))
+  }
+  acaoEditarCategoria(id) {
+    return this.campo(`edit-category-${id}`)
+  }
+  acaoExcluirCategoria(id) {
+    return this.campo(`delete-category-${id}`)
+  }
+  acoesDeEdicaoCategoria() {
+    return this.page.locator('[data-testid^="edit-category-"]')
+  }
+  acoesDeExclusaoCategoria() {
+    return this.page.locator('[data-testid^="delete-category-"]')
+  }
+  dialogoConfirmacao() {
+    return this.campo('confirmacao')
+  }
+  erroDaConfirmacao() {
+    return this.campo('confirmacao-erro')
+  }
+  async cancelarConfirmacao() {
+    await this.campo('confirmacao-cancelar').click()
+  }
+  /** Aviso de sucesso (toast) depois de uma gravação. */
+  aviso() {
+    // O toast do App.jsx não tem data-testid; a faixa do mock também é role=status.
+    return this.page.locator('.toast')
   }
 }
