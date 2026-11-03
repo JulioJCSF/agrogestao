@@ -35,7 +35,7 @@ class DespesaServiceTest {
           new LancamentoService(
               Clock.fixed(Instant.parse("2026-10-12T01:30:00Z"), ZoneId.of("America/Fortaleza"))));
   DespesaService service =
-      new DespesaService(repo, produtores, categorias, plantios, rateio, lancamentos);
+      new DespesaService(repo, produtores, categorias, plantios, rateios, rateio, lancamentos);
 
   Produtor produtor = comId(new Produtor(), 1L);
   Produtor vizinho = comId(new Produtor(), 9L);
@@ -77,6 +77,13 @@ class DespesaServiceTest {
                   .filter(p -> ids.contains(p.getId()))
                   .toList();
             });
+    // L04b: os plantios são lidos travados.
+    when(plantios.buscarParaAtualizar(anyLong()))
+        .thenAnswer(
+            inv ->
+                List.of(p1, p2, p3, outro).stream()
+                    .filter(p -> p.getId().equals(inv.getArgument(0)))
+                    .findFirst());
     when(repo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
   }
 
@@ -303,5 +310,86 @@ class DespesaServiceTest {
         .hasMessage("Despesa não encontrada.");
     assertThatThrownBy(() -> service.detalhar(5L))
         .isInstanceOf(RecursoNaoEncontradoException.class);
+  }
+
+  // L04b
+
+  Despesa existente(Long id, Diaria geradora) {
+    service.criar(entrada("90.00", List.of(11L, 12L)));
+    Despesa despesa = gravada();
+    comId(despesa, id);
+    despesa.setDiaria(geradora);
+    when(repo.findById(id)).thenReturn(Optional.of(despesa));
+    clearInvocations(plantios, repo);
+    return despesa;
+  }
+
+  @Test
+  void deveRecusarExclusaoSemApagarQuandoDespesaForGeradaPorDiaria() {
+    existente(5L, comId(new Diaria(), 40L));
+    assertThatThrownBy(() -> service.excluir(5L))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage("Esta despesa foi gerada por uma diária paga. Altere ou exclua a diária.");
+    verify(repo, never()).delete(any(Despesa.class));
+  }
+
+  @Test
+  void deveExcluirComRateiosSemTravarPlantioQuandoDespesaForManual() {
+    Despesa despesa = existente(5L, null);
+    service.excluir(5L);
+    verify(repo).delete(despesa);
+    verifyNoInteractions(plantios);
+  }
+
+  @Test
+  void deveResponder404QuandoExcluirDespesaInexistente() {
+    when(repo.findById(5L)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.excluir(5L))
+        .isInstanceOf(RecursoNaoEncontradoException.class)
+        .hasMessage("Despesa não encontrada.");
+    verify(repo, never()).delete(any(Despesa.class));
+  }
+
+  @Test
+  void deveTravarPlantiosEmOrdemCrescenteAntesDaRn04QuandoLancar() {
+    service.criar(entrada("90.00", List.of(13L, 11L)));
+    var ordem = inOrder(plantios, lancamentos);
+    ordem.verify(plantios).buscarParaAtualizar(11L);
+    ordem.verify(plantios).buscarParaAtualizar(13L);
+    ordem.verify(lancamentos).validarDataFato(eq(FATO), anyCollection());
+    verify(plantios, times(2)).buscarParaAtualizar(anyLong());
+  }
+
+  @Test
+  void deveTravarPlantiosAtuaisENovosEmOrdemQuandoAlterar() {
+    existente(5L, null);
+    service.alterar(5L, entrada("90.00", List.of(12L, 13L)));
+    var ordem = inOrder(plantios, lancamentos);
+    ordem.verify(plantios).buscarParaAtualizar(11L);
+    ordem.verify(plantios).buscarParaAtualizar(12L);
+    ordem.verify(plantios).buscarParaAtualizar(13L);
+    ordem.verify(lancamentos).validarDataFato(eq(FATO), anyCollection());
+    verify(plantios, times(3)).buscarParaAtualizar(anyLong());
+  }
+
+  @Test
+  void deveRecusarListasQuandoPeriodoForInvertido() {
+    LocalDate inicio = LocalDate.of(2026, 3, 31), fim = LocalDate.of(2026, 3, 1);
+    String mensagem = "O fim do período não pode ser anterior ao início.";
+    assertThatThrownBy(() -> service.listar(1L, inicio, fim, new PaginacaoConsulta()))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(mensagem);
+    assertThatThrownBy(() -> service.listarPorPlantio(11L, inicio, fim, new PaginacaoConsulta()))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(mensagem);
+    verifyNoInteractions(rateios);
+  }
+
+  @Test
+  void deveResponder404QuandoListarDespesasDePlantioInexistente() {
+    assertThatThrownBy(() -> service.listarPorPlantio(99L, null, null, new PaginacaoConsulta()))
+        .isInstanceOf(RecursoNaoEncontradoException.class)
+        .hasMessage("Plantio não encontrado.");
+    verifyNoInteractions(rateios);
   }
 }

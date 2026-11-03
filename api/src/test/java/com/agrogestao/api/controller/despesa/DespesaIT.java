@@ -73,6 +73,7 @@ class DespesaIT extends IntegracaoTest {
     for (String sql :
         List.of(
             "delete from despesa where produtor_id in (?,?)",
+            "delete from diaria where plantio_id in (select id from plantio where propriedade_id in (select id from propriedade where produtor_id in (?,?)))",
             "delete from plantio where propriedade_id in (select id from propriedade where produtor_id in (?,?))",
             "delete from propriedade where produtor_id in (?,?)",
             "delete from produtor where id in (?,?)")) jdbc.update(sql, produtores.toArray());
@@ -208,7 +209,8 @@ class DespesaIT extends IntegracaoTest {
     confere(novos.get(1), p2, "0.333333", "30.00");
   }
 
-  // CT018 (RN10, P1). A L04b repete o passo 4 com GET /api/v1/plantios/{P2}/despesas.
+  // CT018 (RN10, P1). O passo 4 pela consulta por plantio está em
+  // deveDevolverValorGravadoNaConsultaPorPlantioQuandoRateioForAlteradoPorSqlCt018 (L04b).
   @Test
   void deveDevolverValorGravadoQuandoRateioForAlteradoPorSql() throws Exception {
     Long p1 = plantio("1.000"), p2 = plantio("1.000"), p3 = plantio("1.000");
@@ -435,5 +437,213 @@ class DespesaIT extends IntegracaoTest {
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.erro").value("NAO_ENCONTRADO"));
     mvc.perform(get("/api/v1/despesas/999999999")).andExpect(status().isNotFound());
+  }
+
+  // L04b
+
+  Long lancarEm(String valor, String dataFato, Object... plantioIds) throws Exception {
+    String resposta =
+        enviar(
+                post("/api/v1/despesas"),
+                corpo(produtor, adubo, "Adubo de teste", valor, dataFato, plantioIds))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    return ((Number) JsonPath.read(resposta, "$.id")).longValue();
+  }
+
+  ResultActions despesasDo(Long plantio, String... filtros) throws Exception {
+    MockHttpServletRequestBuilder requisicao = get("/api/v1/plantios/" + plantio + "/despesas");
+    for (int i = 0; i < filtros.length; i += 2) requisicao.param(filtros[i], filtros[i + 1]);
+    return mvc.perform(requisicao);
+  }
+
+  int linhas(String tabela, String coluna, Long id) {
+    return jdbc.queryForObject(
+        "select count(*) from " + tabela + " where " + coluna + " = ?", Integer.class, id);
+  }
+
+  @Test
+  void deveRemoverSoADespesaESeusRateiosQuandoExcluirCt019() throws Exception {
+    Long p1 = plantio("1.000"), p2 = plantio("1.000");
+    Long d1 = lancar("80.00", p1, p2), d2 = lancar("30.00", p1);
+    confere(rateios(d1).get(1), p2, "0.500000", "40.00");
+
+    mvc.perform(delete("/api/v1/despesas/" + d1)).andExpect(status().isNoContent());
+
+    assertThat(linhas("despesa", "id", d1)).isZero();
+    assertThat(linhas("rateio_despesa", "despesa_id", d1)).isZero();
+    List<Map<String, Object>> deD2 = rateios(d2);
+    assertThat(deD2).hasSize(1);
+    confere(deD2.get(0), p1, "1.000000", "30.00");
+    despesasDo(p1)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.itens[0].id").value(d2))
+        .andExpect(jsonPath("$.itens[0].valorRateado").value(30.00));
+  }
+
+  @Test
+  void deveDevolverValorGravadoNaConsultaPorPlantioQuandoRateioForAlteradoPorSqlCt018()
+      throws Exception {
+    Long p1 = plantio("1.000"), p2 = plantio("1.000"), p3 = plantio("1.000");
+    Long d1 = lancar("100.00", p1, p2, p3);
+    jdbc.update(
+        "update rateio_despesa set valor_rateado = 40.00 where despesa_id = ? and plantio_id = ?",
+        d1,
+        p2);
+    // Defeito: 33.33, recalculado do percentual ou da área.
+    despesasDo(p2)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.itens", hasSize(1)))
+        .andExpect(jsonPath("$.itens[0].id").value(d1))
+        .andExpect(jsonPath("$.itens[0].produtorId").value(produtor))
+        .andExpect(jsonPath("$.itens[0].percentual").value(0.333333))
+        .andExpect(jsonPath("$.itens[0].valorRateado").value(40.00));
+  }
+
+  @Test
+  void deveFiltrarPorPeriodoComBordasQuandoListarDespesasDoPlantio() throws Exception {
+    Long p1 = plantio("1.000");
+    lancarEm("10.00", "2026-02-28", p1);
+    Long inicio = lancarEm("20.00", "2026-03-01", p1);
+    Long fim = lancarEm("30.00", "2026-03-31", p1);
+    lancarEm("40.00", "2026-04-01", p1);
+    despesasDo(p1, "periodoInicio", "2026-03-01", "periodoFim", "2026-03-31")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.itens[*].id", contains(inicio.intValue(), fim.intValue())));
+    despesasDo(p1, "tamanho", "1", "pagina", "3")
+        .andExpect(jsonPath("$.total").value(4))
+        .andExpect(jsonPath("$.itens[0].valorRateado").value(40.00));
+    despesasDo(p1, "periodoInicio", "2026-03-31", "periodoFim", "2026-03-01")
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(
+            jsonPath("$.mensagem").value("O fim do período não pode ser anterior ao início."));
+  }
+
+  @Test
+  void deveMostrarEstornadaEGeradaPorDiariaQuandoListar() throws Exception {
+    Long p1 = plantio("1.000");
+    Long estornada = lancar("50.00", p1);
+    jdbc.update("update despesa set estornada = true where id = ?", estornada);
+    String criada =
+        enviar(
+                post("/api/v1/plantios/" + p1 + "/diarias"),
+                "{\"natureza\":\"PAGA\",\"quantidadeDias\":1,\"valorUnitario\":80,\"dataFato\":\"2026-03-10\"}")
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    Number diariaId = JsonPath.read(criada, "$.id");
+    Long gerada =
+        jdbc.queryForObject("select id from despesa where diaria_id = ?", Long.class, diariaId);
+
+    despesasDo(p1)
+        .andExpect(jsonPath("$.itens[*].id", contains(estornada.intValue(), gerada.intValue())))
+        .andExpect(jsonPath("$.itens[0].estornada").value(true))
+        .andExpect(jsonPath("$.itens[0].diariaId").value(nullValue()))
+        .andExpect(jsonPath("$.itens[1].estornada").value(false))
+        .andExpect(jsonPath("$.itens[1].diariaId").value(diariaId))
+        .andExpect(jsonPath("$.itens[1].categoriaDespesaId").value(diaria))
+        .andExpect(jsonPath("$.itens[1].valorRateado").value(80.00));
+    mvc.perform(get("/api/v1/despesas").param("produtorId", produtor.toString()))
+        .andExpect(jsonPath("$.itens[*].id", contains(estornada.intValue(), gerada.intValue())))
+        .andExpect(jsonPath("$.itens[0].estornada").value(true))
+        .andExpect(jsonPath("$.itens[1].diariaId").value(diariaId));
+  }
+
+  @Test
+  void deveListarSoDoProdutorComRateiosGravadosQuandoFiltrarPorProdutor() throws Exception {
+    Long p1 = plantio("1.000"), p2 = plantio("1.000");
+    Long alheio = plantio(propriedadeVizinho, "1.000", null);
+    Long d1 = lancar("100.00", p2, p1);
+    Long d2 = lancarEm("30.00", "2026-04-01", p1);
+    enviar(
+            post("/api/v1/despesas"),
+            corpo(vizinho, adubo, "Adubo do vizinho", "70.00", "2026-03-10", alheio))
+        .andExpect(status().isCreated());
+    jdbc.update(
+        "update rateio_despesa set valor_rateado = 49.99 where despesa_id = ? and plantio_id = ?",
+        d1,
+        p2);
+
+    mvc.perform(get("/api/v1/despesas").param("produtorId", produtor.toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.itens[*].id", contains(d1.intValue(), d2.intValue())))
+        .andExpect(
+            jsonPath("$.itens[0].rateios[*].plantioId", contains(p1.intValue(), p2.intValue())))
+        .andExpect(jsonPath("$.itens[0].rateios[1].valorRateado").value(49.99));
+    mvc.perform(
+            get("/api/v1/despesas")
+                .param("produtorId", produtor.toString())
+                .param("tamanho", "1")
+                .param("pagina", "1"))
+        .andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.itens[*].id", contains(d2.intValue())));
+    mvc.perform(
+            get("/api/v1/despesas")
+                .param("produtorId", produtor.toString())
+                .param("periodoInicio", "2026-03-10")
+                .param("periodoFim", "2026-03-10"))
+        .andExpect(jsonPath("$.itens[*].id", contains(d1.intValue())));
+    mvc.perform(
+            get("/api/v1/despesas")
+                .param("periodoInicio", "2026-03-11")
+                .param("periodoFim", "2026-03-10"))
+        .andExpect(status().isUnprocessableEntity());
+  }
+
+  @Test
+  void deveRecusarExclusaoMantendoTudoQuandoDespesaForGeradaPorDiaria() throws Exception {
+    Long p1 = plantio("1.000");
+    String criada =
+        enviar(
+                post("/api/v1/plantios/" + p1 + "/diarias"),
+                "{\"natureza\":\"PAGA\",\"quantidadeDias\":1,\"valorUnitario\":80,\"dataFato\":\"2026-03-10\"}")
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    Number diariaId = JsonPath.read(criada, "$.id");
+    Long gerada =
+        jdbc.queryForObject("select id from despesa where diaria_id = ?", Long.class, diariaId);
+    mvc.perform(delete("/api/v1/despesas/" + gerada))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(
+            jsonPath("$.mensagem")
+                .value("Esta despesa foi gerada por uma diária paga. Altere ou exclua a diária."));
+    assertThat(linhas("diaria", "id", diariaId.longValue())).isEqualTo(1);
+    assertThat(linhas("despesa", "id", gerada)).isEqualTo(1);
+    assertThat(linhas("rateio_despesa", "despesa_id", gerada)).isEqualTo(1);
+  }
+
+  @Test
+  void deveResponder404QuandoConsultarOuExcluirInexistente() throws Exception {
+    despesasDo(999999L)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.mensagem").value("Plantio não encontrado."));
+    mvc.perform(delete("/api/v1/despesas/999999"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.mensagem").value("Despesa não encontrada."));
+  }
+
+  @Test
+  @WithMockUser(username = UsuariosTeste.CONSULTA, roles = "CONSULTA")
+  void devePermitirListasENegarExclusaoQuandoPerfilForConsulta() throws Exception {
+    Long p1 = plantio("1.000");
+    Long d1 =
+        jdbc.queryForObject(
+            "insert into despesa(produtor_id,categoria_despesa_id,descricao,valor_total,data_fato,data_coleta,estornada,criado_por) values (?,?,'Adubo de teste',10.00,'2026-03-10','2026-03-10',false,?) returning id",
+            Long.class,
+            produtor,
+            adubo,
+            autor);
+    despesasDo(p1).andExpect(status().isOk());
+    mvc.perform(get("/api/v1/despesas")).andExpect(status().isOk());
+    mvc.perform(delete("/api/v1/despesas/" + d1)).andExpect(status().isForbidden());
+    assertThat(linhas("despesa", "id", d1)).isEqualTo(1);
   }
 }
