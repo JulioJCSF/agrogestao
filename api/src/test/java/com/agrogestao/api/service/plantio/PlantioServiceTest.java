@@ -24,6 +24,7 @@ class PlantioServiceTest {
   DespesaRepository despesas = mock(DespesaRepository.class);
   DiariaRepository diarias = mock(DiariaRepository.class);
   VendaRepository vendas = mock(VendaRepository.class);
+  ItemVendaRepository itensVenda = mock(ItemVendaRepository.class);
   Clock clock = Clock.fixed(Instant.parse("2026-10-12T01:30:00Z"), ZoneId.of("America/Fortaleza"));
   PlantioService service = servico(clock);
   Cultura cultura = new Cultura();
@@ -47,7 +48,7 @@ class PlantioServiceTest {
 
   PlantioService servico(Clock relogio) {
     return new PlantioService(
-        repo, propriedades, culturas, producoes, despesas, diarias, vendas, relogio);
+        repo, propriedades, culturas, producoes, despesas, diarias, vendas, itensVenda, relogio);
   }
 
   PlantioRequisicao entrada(String area, LocalDate inicio, TipoCiclo ciclo) {
@@ -125,6 +126,33 @@ class PlantioServiceTest {
     assertThatThrownBy(() -> service.alterar(4L, entrada("1", LocalDate.of(2026, 7, 1), null)))
         .isInstanceOf(RegraNegocioException.class)
         .hasMessageContaining("01/07/2026");
+    verify(repo, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void deveRejeitarCulturaDeOutraUnidadeQuandoPlantioTiverSoItemDeVenda() {
+    cultura.setUnidadeMedida("kg");
+    Cultura emSaca = new Cultura();
+    ReflectionTestUtils.setField(emSaca, "id", 8L);
+    emSaca.setUnidadeMedida("saca");
+    emSaca.setTipoCicloPadrao(TipoCiclo.CURTO);
+    when(culturas.findById(8L)).thenReturn(Optional.of(emSaca));
+    Plantio plantio = new Plantio();
+    ReflectionTestUtils.setField(plantio, "id", 4L);
+    plantio.setPropriedade(propriedade);
+    plantio.setCultura(cultura);
+    when(repo.buscarParaAtualizar(4L)).thenReturn(Optional.of(plantio));
+    when(itensVenda.existsByPlantioId(4L)).thenReturn(true);
+    assertThatThrownBy(
+            () ->
+                service.alterar(
+                    4L,
+                    new PlantioRequisicao(
+                        1L, 8L, BigDecimal.ONE, null, LocalDate.of(2026, 2, 1), null)))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage("A cultura do plantio deve manter a unidade da produção já registrada.");
+    verify(producoes).existsByPlantioId(4L);
+    assertThat(plantio.getCultura()).isSameAs(cultura);
     verify(repo, never()).saveAndFlush(any());
   }
 

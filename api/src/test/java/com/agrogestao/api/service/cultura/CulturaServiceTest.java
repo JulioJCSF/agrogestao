@@ -15,7 +15,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 class CulturaServiceTest {
   CulturaRepository repo = mock(CulturaRepository.class);
   ProducaoRepository producoes = mock(ProducaoRepository.class);
-  CulturaService service = new CulturaService(repo, producoes);
+  ItemVendaRepository itensVenda = mock(ItemVendaRepository.class);
+  CulturaService service = new CulturaService(repo, producoes, itensVenda);
   CulturaRequisicao dto = new CulturaRequisicao(" Cultura Fictícia ", TipoCiclo.CURTO, "kg");
 
   @Test
@@ -53,6 +54,24 @@ class CulturaServiceTest {
     when(repo.buscarParaAtualizar(1L)).thenReturn(Optional.of(new Cultura()));
     when(repo.existsByNomeIgnoreCaseAndIdNot("Cultura Fictícia", 1L)).thenReturn(true);
     assertThatThrownBy(() -> service.alterar(1L, dto)).isInstanceOf(RegraNegocioException.class);
+    verify(repo, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void deveRejeitarTrocaDeUnidadeQuandoCulturaTiverSoItemDeVenda() {
+    Cultura cultura = new Cultura();
+    ReflectionTestUtils.setField(cultura, "id", 1L);
+    cultura.setUnidadeMedida("kg");
+    when(repo.buscarParaAtualizar(1L)).thenReturn(Optional.of(cultura));
+    when(itensVenda.existsByPlantioCulturaId(1L)).thenReturn(true);
+    assertThatThrownBy(
+            () ->
+                service.alterar(
+                    1L, new CulturaRequisicao("Cultura Fictícia", TipoCiclo.CURTO, "saca")))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage("A unidade da cultura não pode mudar porque já há produção registrada.");
+    verify(producoes).existsByPlantioCulturaId(1L);
+    assertThat(cultura.getUnidadeMedida()).isEqualTo("kg");
     verify(repo, never()).saveAndFlush(any());
   }
 

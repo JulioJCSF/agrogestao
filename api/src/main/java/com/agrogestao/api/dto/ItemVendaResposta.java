@@ -9,7 +9,7 @@ import java.time.*;
 @Schema(
     description = "Resposta do contrato do MVP",
     example =
-        "{\"id\":1,\"plantioId\":1,\"quantidade\":1.5,\"unidadeMedida\":\"kg\",\"valorUnitario\":80,\"valorTotal\":100.25}")
+        "{\"id\":1,\"plantioId\":1,\"quantidade\":1.5,\"unidadeMedida\":\"kg\",\"valorUnitario\":80,\"valorTotal\":120.00}")
 public record ItemVendaResposta(
     Long id,
     Long plantioId,

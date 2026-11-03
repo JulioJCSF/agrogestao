@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.11
+Versão 1.12
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -46,6 +46,8 @@ Alterar a área de um plantio não recalcula rateios já gravados.
 A unidade de cada colheita deve ser a da cultura do plantio. Quando omitida, a API a preenche; quando informada, compara ignorando espaços nas pontas e diferença entre maiúsculas e minúsculas e grava a grafia da cultura. Unidade diferente é rejeitada com HTTP 422.
 
 A unidade da cultura não pode ser alterada quando já há produção em seus plantios. Um plantio com produção também não pode trocar para cultura de unidade diferente. Nenhuma quantidade histórica é convertida ou regravada.
+
+A mesma proteção vale quando o plantio tem item de venda, ainda que sem produção registrada (decisão de 2026-11-03, L09b).
 **Origem:** RF15, RF16, RN30; decisão do grupo na L01 em 29/10/2026, fechando a lacuna da Q00d/Q00e sobre soma de colheitas em unidades diferentes.
 
 ---
@@ -184,6 +186,8 @@ Uma venda deve conter no mínimo um item.
 
 ### RN27 — Item aponta para plantio
 Todo item de venda deve indicar o plantio de origem.
+
+Todos os plantios dos itens devem ser do produtor informado na venda; item com plantio de outro produtor é rejeitado com HTTP 422 (decisão do grupo de 2026-11-03, L09b).
 **Origem:** RF31, M02
 
 ### RN28 — Sugestão de plantio
@@ -192,6 +196,8 @@ Havendo um único plantio aberto da cultura informada, o sistema o sugere como o
 
 ### RN29 — Saldo não bloqueia venda
 O saldo disponível é informativo. O sistema **não** impede venda de quantidade superior ao saldo — apenas sinaliza a divergência.
+
+A sinalização é um aviso por plantio da venda cujo total vendido passa do total produzido, ambos acumulados no plantio, sem recorte de período e incluindo a própria venda. Os avisos são calculados no cadastro, na alteração e na consulta da venda (decisão de 2026-11-03, L09b).
 **Origem:** RF33, M03, R5
 
 > A produção é registrada de memória. Bloquear por saldo significaria impedir o registro de uma venda que de fato aconteceu.
@@ -202,6 +208,8 @@ A unidade de medida do item de venda deve ser a mesma da produção registrada p
 - Sem produção registrada no plantio, vale a unidade da cultura do plantio.
 - A comparação ignora espaços nas pontas e diferença entre maiúsculas e minúsculas: "kg", "Kg" e " KG " são a mesma unidade.
 - O valor total do item é a quantidade multiplicada pelo valor unitário, arredondado em duas casas, com a metade arredondada para cima (`HALF_UP`). O valor total da venda é a soma dos totais dos itens já arredondados.
+- O item grava a grafia da unidade de referência: " KG " informado é gravado como "kg" (decisão de 2026-11-03, L09b).
+- Quantidade e valor unitário devem ser maiores que zero; caso contrário, HTTP 422 (decisão de 2026-11-03, L09b).
 
 **Origem:** RF31
 
@@ -274,4 +282,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Na versão 1.10, a RN11, a RN12 e a RN13 foram completadas com as decisões da L07 (diária), de 2026-10-29. Na versão 1.11, a RN25 foi completada com a decisão da A01, de 2026-11-03 (quantidades no mesmo período do resultado). Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Na versão 1.10, a RN11, a RN12 e a RN13 foram completadas com as decisões da L07 (diária), de 2026-10-29. Na versão 1.11, a RN25 foi completada com a decisão da A01, de 2026-11-03 (quantidades no mesmo período do resultado). Na versão 1.12, a RN27, a RN29, a RN30 e a RN38 foram completadas com as decisões da L09b, de 2026-11-03 (plantios do produtor da venda, avisos também na consulta, grafia da unidade, quantidade e valor positivos e proteção da unidade com item de venda). Nenhuma regra segue pendente.

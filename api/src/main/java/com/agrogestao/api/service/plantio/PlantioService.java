@@ -26,6 +26,7 @@ public class PlantioService {
   private final DespesaRepository despesas;
   private final DiariaRepository diarias;
   private final VendaRepository vendas;
+  private final ItemVendaRepository itensVenda;
   private final Clock relogio;
 
   public PaginaResposta<PlantioResposta> listar(
@@ -152,7 +153,9 @@ public class PlantioService {
             .buscarParaAtualizar(dto.culturaId())
             .orElseThrow(() -> new RecursoNaoEncontradoException("Cultura não encontrada."));
     if (entidade.getId() != null
-        && producoes.existsByPlantioId(entidade.getId())
+        // RN38: item de venda também fixa a unidade, mesmo sem produção (L09b).
+        && (producoes.existsByPlantioId(entidade.getId())
+            || itensVenda.existsByPlantioId(entidade.getId()))
         && !entidade
             .getCultura()
             .getUnidadeMedida()
