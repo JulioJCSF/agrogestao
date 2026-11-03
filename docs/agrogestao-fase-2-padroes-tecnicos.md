@@ -239,7 +239,7 @@ Essa paginação e as assinaturas compõem a proposta técnica da F13; revisão 
 | Clientes e vendas | GET/POST /clientes e /vendas; GET/PUT /clientes/{id}; GET/PUT/DELETE /vendas/{id}. Além da unidade (RN30) e das datas (RN04, RN35), a venda responde 422 para item de plantio de outro produtor e para quantidade ou valor unitário menor ou igual a zero |
 | Resultado | GET /plantios/{id}/resultado?mes=AAAA-MM |
 | Relatórios | POST /relatorios; GET /produtores/{produtorId}/relatorios; GET /relatorios/{id} |
-| Usuários | GET/POST /usuarios; PUT /usuarios/{id} |
+| Usuários | GET/POST /usuarios; PUT /usuarios/{id}; PUT /usuarios/{id}/senha |
 | Complementos | GET /plantios/{id}/saldo; GET /painel |
 Todos os caminhos da tabela têm prefixo `/api/v1`. Os DTOs e exemplos concretos são gerados do código no Swagger; ele é a referência completa de campos e parâmetros.
 

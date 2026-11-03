@@ -62,7 +62,8 @@ class AuthServiceTest {
 
   @Test
   void deveDevolverTokenEUsuarioQuandoCredenciaisValidas() {
-    when(usuarioRepository.findByLogin("operadora")).thenReturn(Optional.of(usuario(true)));
+    when(usuarioRepository.findByLoginIgnoreCase("operadora"))
+        .thenReturn(Optional.of(usuario(true)));
 
     LoginResposta resposta = authService.login("operadora", SENHA);
 
@@ -78,7 +79,8 @@ class AuthServiceTest {
 
   @Test
   void deveLancarCredenciaisInvalidasQuandoSenhaErrada() {
-    when(usuarioRepository.findByLogin("operadora")).thenReturn(Optional.of(usuario(true)));
+    when(usuarioRepository.findByLoginIgnoreCase("operadora"))
+        .thenReturn(Optional.of(usuario(true)));
 
     assertThatThrownBy(() -> authService.login("operadora", "senha-errada"))
         .isInstanceOf(CredenciaisInvalidasException.class)
@@ -87,7 +89,7 @@ class AuthServiceTest {
 
   @Test
   void deveLancarCredenciaisInvalidasQuandoLoginInexistente() {
-    when(usuarioRepository.findByLogin("ninguem")).thenReturn(Optional.empty());
+    when(usuarioRepository.findByLoginIgnoreCase("ninguem")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> authService.login("ninguem", SENHA))
         .isInstanceOf(CredenciaisInvalidasException.class)
@@ -96,7 +98,8 @@ class AuthServiceTest {
 
   @Test
   void deveLancarCredenciaisInvalidasQuandoUsuarioInativo() {
-    when(usuarioRepository.findByLogin("operadora")).thenReturn(Optional.of(usuario(false)));
+    when(usuarioRepository.findByLoginIgnoreCase("operadora"))
+        .thenReturn(Optional.of(usuario(false)));
 
     assertThatThrownBy(() -> authService.login("operadora", SENHA))
         .isInstanceOf(CredenciaisInvalidasException.class)

@@ -182,9 +182,7 @@ class PermissoesIT extends IntegracaoTest {
   @Test
   void devePassarDaAutorizacaoQuandoAdminAcessarUsuariosOuGravar() throws Exception {
     String admin = usuarios.bearer(Perfil.ADMIN);
-    como(admin, get("/api/v1/usuarios"))
-        .andExpect(status().isNotImplemented())
-        .andExpect(jsonPath("$.erro").value("NAO_IMPLEMENTADO"));
+    como(admin, get("/api/v1/usuarios")).andExpect(status().isOk());
     como(admin, cultura("Cultura Teste F04b Admin")).andExpect(status().isCreated());
   }
 

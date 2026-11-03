@@ -167,6 +167,7 @@ class ContratoIT extends IntegracaoTest {
             "/api/v1/produtores/{produtorId}/relatorios",
             "/api/v1/usuarios",
             "/api/v1/usuarios/{id}",
+            "/api/v1/usuarios/{id}/senha",
             "/api/v1/plantios/{id}/saldo",
             "/api/v1/painel");
     Map<String, Object> schemas = JsonPath.read(body, "$.components.schemas");
@@ -205,6 +206,7 @@ class ContratoIT extends IntegracaoTest {
             "ConteudoRelatorioResposta",
             "UsuarioRequisicao",
             "UsuarioAlteracaoRequisicao",
+            "UsuarioSenhaRequisicao",
             "UsuarioResposta",
             "SaldoPlantioResposta",
             "PainelResposta");
@@ -213,7 +215,8 @@ class ContratoIT extends IntegracaoTest {
             "CulturaRequisicao",
             "DespesaRequisicao",
             "VendaRequisicao",
-            "EmissaoRelatorioResposta")) {
+            "EmissaoRelatorioResposta",
+            "UsuarioSenhaRequisicao")) {
       assertThat(((Map<?, ?>) schemas.get(name)).containsKey("example")).isTrue();
     }
     assertThat(body).doesNotContain("senhaHash", "senha_hash");

@@ -559,19 +559,97 @@ describe('400 e 422 por módulo', () => {
     validacao(await admin('POST', '/usuarios', { ...usuario, login: '' }), [
       { campo: 'login', mensagem: 'não deve estar em branco' },
     ])
-    const repetido = 'Já existe usuário com este login.'
+    const repetido = 'Já existe um usuário com este login.'
     regra(
-      await admin('POST', '/usuarios', { ...usuario, login: 'admin.mock' }),
+      await admin('POST', '/usuarios', { ...usuario, login: ' ADMIN.Mock ' }),
       repetido,
       [{ campo: 'login', mensagem: repetido }],
     )
-    const criado = await admin('POST', '/usuarios', usuario)
+    const criado = await admin('POST', '/usuarios', {
+      ...usuario,
+      login: '  Novo.Mock ',
+    })
     assert.equal(criado.status, 201)
+    assert.equal(criado.corpo.login, 'novo.mock')
     assert.equal(criado.corpo.senha, undefined)
     const login = await chamar('POST', '/auth/login', {
-      corpo: { login: 'novo.mock', senha: 'senha-ficticia' },
+      corpo: { login: 'NOVO.MOCK', senha: 'senha-ficticia' },
     })
     assert.equal(login.corpo.usuario.perfil, 'CONSULTA')
+  })
+
+  test('usuários: redefinição de senha e último admin (M01)', async () => {
+    const admin = (metodo, caminho, corpo) =>
+      chamar(metodo, caminho, { login: 'admin.mock', corpo })
+    const senha = await admin('PUT', '/usuarios/3/senha', {
+      senha: 'senha-nova-ficticia',
+    })
+    assert.equal(senha.status, 204)
+    assert.equal(senha.corpo, null)
+    const entrar = (s) =>
+      chamar('POST', '/auth/login', {
+        corpo: { login: 'consulta.mock', senha: s },
+      })
+    assert.equal((await entrar('mock')).status, 401)
+    assert.equal((await entrar('senha-nova-ficticia')).status, 200)
+    validacao(await admin('PUT', '/usuarios/3/senha', { senha: '1234567' }), [
+      {
+        campo: 'senha',
+        mensagem: 'tamanho deve ser entre 8 e 72',
+      },
+    ])
+    const longa = 'A senha deve ter no máximo 72 bytes.'
+    erroEsperado(
+      await admin('PUT', '/usuarios/3/senha', { senha: 'á'.repeat(40) }),
+      400,
+      'VALIDACAO',
+      longa,
+      [{ campo: 'senha', mensagem: longa }],
+    )
+    erroEsperado(
+      await admin('PUT', '/usuarios/999/senha', {
+        senha: 'senha-nova-ficticia',
+      }),
+      404,
+      'NAO_ENCONTRADO',
+      'Usuário não encontrado.',
+    )
+    assert.equal(
+      (
+        await operador('PUT', '/usuarios/3/senha', {
+          senha: 'senha-nova-ficticia',
+        })
+      ).status,
+      403,
+    )
+    const ultimo = 'O sistema precisa de pelo menos um administrador ativo.'
+    const semAdmin = { nome: 'Administrador Fictício', perfil: 'ADMIN' }
+    regra(
+      await admin('PUT', '/usuarios/1', { ...semAdmin, ativo: false }),
+      ultimo,
+      [],
+    )
+    regra(
+      await admin('PUT', '/usuarios/1', {
+        ...semAdmin,
+        perfil: 'LANCAMENTO',
+        ativo: true,
+      }),
+      ultimo,
+      [],
+    )
+    // Com outro ADMIN ativo, o primeiro pode se desativar.
+    await admin('PUT', '/usuarios/2', {
+      nome: 'Operador Fictício',
+      perfil: 'ADMIN',
+      ativo: true,
+    })
+    const desativado = await admin('PUT', '/usuarios/1', {
+      ...semAdmin,
+      ativo: false,
+    })
+    assert.equal(desativado.status, 200)
+    assert.equal(desativado.corpo.ativo, false)
   })
 })
 
