@@ -149,8 +149,17 @@ public class PlantioService {
           "O plantio não pode ser transferido para propriedade de outro produtor.");
     Cultura cultura =
         culturas
-            .findById(dto.culturaId())
+            .buscarParaAtualizar(dto.culturaId())
             .orElseThrow(() -> new RecursoNaoEncontradoException("Cultura não encontrada."));
+    if (entidade.getId() != null
+        && producoes.existsByPlantioId(entidade.getId())
+        && !entidade
+            .getCultura()
+            .getUnidadeMedida()
+            .trim()
+            .equalsIgnoreCase(cultura.getUnidadeMedida().trim()))
+      throw new RegraNegocioException(
+          "A cultura do plantio deve manter a unidade da produção já registrada.");
     entidade.setPropriedade(propriedade);
     entidade.setCultura(cultura);
     entidade.setArea(dto.area());

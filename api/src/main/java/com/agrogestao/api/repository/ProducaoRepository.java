@@ -2,11 +2,19 @@ package com.agrogestao.api.repository;
 
 import com.agrogestao.api.model.Producao;
 import java.time.LocalDate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProducaoRepository extends JpaRepository<Producao, Long> {
+  boolean existsByPlantioId(Long plantioId);
+
+  boolean existsByPlantioCulturaId(Long culturaId);
+
+  Page<Producao> findByPlantioId(Long plantioId, Pageable pageable);
+
   boolean existsByPlantioPropriedadeProdutorId(Long produtorId);
 
   /** Maior data do fato entre as produções do plantio; nula se não houver (C06b). */
