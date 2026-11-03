@@ -8,6 +8,7 @@ import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import com.agrogestao.api.service.lancamento.LancamentoService;
+import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
@@ -22,12 +23,20 @@ class DiariaServiceTest {
   DespesaRepository despesas = mock(DespesaRepository.class);
   RateioDespesaRepository rateios = mock(RateioDespesaRepository.class);
   EmissaoRelatorioRepository emissoes = mock(EmissaoRelatorioRepository.class);
+  ProdutorRepository produtores = mock(ProdutorRepository.class);
   LancamentoService lancamentos =
       new LancamentoService(
           Clock.fixed(Instant.parse("2026-10-12T01:30:00Z"), ZoneId.of("America/Fortaleza")));
   DiariaService service =
       new DiariaService(
-          repository, plantios, referencias, categorias, despesas, rateios, emissoes, lancamentos);
+          repository,
+          plantios,
+          referencias,
+          categorias,
+          despesas,
+          rateios,
+          lancamentos,
+          new ProtecaoEmissao(emissoes, produtores));
   Plantio plantio = new Plantio();
   ValorReferenciaDiaria vr1 = referencia(1L, "80.25", "2026-01-01", "2026-06-30");
   ValorReferenciaDiaria vr2 = referencia(2L, "90.50", "2026-07-01", null);
@@ -44,6 +53,8 @@ class DiariaServiceTest {
     propriedade.setProdutor(produtor);
     plantio.setPropriedade(propriedade);
     when(plantios.buscarParaAtualizar(7L)).thenReturn(Optional.of(plantio));
+    // A03b: produtor, diária e plantio, nessa ordem.
+    when(produtores.buscarParaAtualizar(8L)).thenReturn(Optional.of(produtor));
     when(referencias.buscarVigente(any()))
         .thenAnswer(
             inv -> {
@@ -70,6 +81,12 @@ class DiariaServiceTest {
             inv -> gravadas.stream().filter(d -> d.getId().equals(inv.getArgument(0))).findFirst());
     when(repository.buscarParaAtualizar(anyLong()))
         .thenAnswer(inv -> repository.findById(inv.getArgument(0)));
+    when(repository.buscarProdutorId(anyLong()))
+        .thenAnswer(
+            inv ->
+                repository
+                    .findById(inv.getArgument(0))
+                    .map(d -> d.getPlantio().getPropriedade().getProdutor().getId()));
     when(despesas.saveAndFlush(any()))
         .thenAnswer(
             inv -> {
@@ -205,5 +222,68 @@ class DiariaServiceTest {
     assertThat(geradas).isEmpty();
     assertThat(service.criar(7L, dto(NaturezaDiaria.PAGA, "1", "90", "2026-06-30")).dataFato())
         .isEqualTo(LocalDate.of(2026, 6, 30));
+  }
+
+  // A03b
+
+  static final String DESPESA_ESTORNADA =
+      "A despesa desta diária foi estornada. A diária não pode mais ser alterada nem excluída.";
+
+  /** Diária paga gravada, com a despesa gerada localizável pela diária. */
+  DiariaResposta paga() {
+    when(despesas.findByDiariaId(anyLong()))
+        .thenAnswer(
+            inv ->
+                geradas.stream()
+                    .filter(d -> d.getDiaria().getId().equals(inv.getArgument(0)))
+                    .findFirst());
+    return service.criar(7L, dto(NaturezaDiaria.PAGA, "2", "90", "2026-03-10"));
+  }
+
+  @Test
+  void deveRecusarAlterarEExcluirQuandoDespesaDaDiariaPagaEstiverEstornada() {
+    DiariaResposta diaria = paga();
+    geradas.get(0).setEstornada(true);
+    int gravadasAntes = gravadas.size();
+    assertThatThrownBy(
+            () -> service.alterar(diaria.id(), dto(NaturezaDiaria.PAGA, "3", "90", "2026-03-10")))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(DESPESA_ESTORNADA);
+    assertThatThrownBy(() -> service.excluir(diaria.id()))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(DESPESA_ESTORNADA);
+    assertThat(gravadas).hasSize(gravadasAntes);
+    verify(repository, never()).delete(any(Diaria.class));
+    verify(despesas, never()).delete(any(Despesa.class));
+  }
+
+  @Test
+  void deveManterAMensagemDaL07QuandoDespesaDaDiariaEstiverEmPeriodoEmitido() {
+    DiariaResposta diaria = paga();
+    when(emissoes.existeEmissaoNoPeriodo(8L, LocalDate.of(2026, 3, 10))).thenReturn(true);
+    assertThatThrownBy(() -> service.excluir(diaria.id()))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(
+            "A despesa desta diária já consta em relatório emitido. Não altere a data nem exclua a"
+                + " diária. Use o estorno da despesa.");
+    verify(despesas, never()).delete(any(Despesa.class));
+  }
+
+  @Test
+  void deveTravarProdutorAntesDaDiariaEDoPlantioQuandoAlterarOuExcluir() {
+    DiariaResposta diaria = paga();
+    clearInvocations(produtores, repository, plantios);
+    service.alterar(diaria.id(), dto(NaturezaDiaria.PAGA, "3", "90", "2026-03-10"));
+    var ordem = inOrder(produtores, repository, plantios);
+    ordem.verify(produtores).buscarParaAtualizar(8L);
+    ordem.verify(repository).buscarParaAtualizar(diaria.id());
+    ordem.verify(plantios).buscarParaAtualizar(7L);
+
+    clearInvocations(produtores, repository, plantios);
+    service.excluir(diaria.id());
+    var exclusao = inOrder(produtores, repository, plantios);
+    exclusao.verify(produtores).buscarParaAtualizar(8L);
+    exclusao.verify(repository).buscarParaAtualizar(diaria.id());
+    exclusao.verify(plantios).buscarParaAtualizar(7L);
   }
 }

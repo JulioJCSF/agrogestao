@@ -5,6 +5,7 @@ import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import com.agrogestao.api.service.lancamento.LancamentoService;
+import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
@@ -26,6 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>As listas (L04b) mostram estornadas, com {@code estornada}, e geradas por diária, com {@code
  * diariaId}: tirar a estornada do custo é da apuração (RN19), não da consulta.
+ *
+ * <p>A03b (RN11, RN34; decisões de 03/11): a despesa com data do fato em período emitido não é
+ * excluída nem tem a data trocada, mas o resto continua corrigível. O estorno vale para qualquer
+ * despesa, inclusive a gerada por diária, e não cria lançamento de ajuste; a estornada fica
+ * congelada. Alterar, excluir e estornar travam o produtor antes de ler a despesa e antes de
+ * qualquer plantio ({@link ProtecaoEmissao}).
  */
 @Service
 @RequiredArgsConstructor
@@ -40,6 +47,15 @@ public class DespesaService {
   private final RateioDespesaRepository rateios;
   private final RateioDespesaService rateio;
   private final LancamentoService lancamentos;
+  private final ProtecaoEmissao protecao;
+
+  static final String JA_ESTORNADA = "Esta despesa já foi estornada.";
+  static final String ESTORNADA =
+      "Esta despesa foi estornada e não pode mais ser alterada nem excluída.";
+  static final String EXCLUSAO_EMITIDA =
+      "Esta despesa já consta em relatório emitido e não pode ser excluída. Use o estorno.";
+  static final String DATA_EMITIDA =
+      "Esta despesa já consta em relatório emitido. A data do fato não pode ser alterada.";
 
   public DespesaResposta detalhar(Long id) {
     return DespesaResposta.de(encontrar(id));
@@ -120,9 +136,12 @@ public class DespesaService {
 
   @Transactional
   public DespesaResposta alterar(Long id, DespesaRequisicao dto) {
-    Despesa despesa = encontrar(id);
+    Despesa despesa = travar(id);
+    exigirNaoEstornada(despesa);
     exigirDespesaManual(despesa);
-    // TODO(A03b): despesa com data do fato em período já emitido → bloqueio da RN11.
+    // Decisão 1 de 03/11: só a troca da data é recusada; senão bastaria deslocar e excluir.
+    if (!despesa.getDataFato().equals(dto.dataFato()))
+      protecao.exigirNaoEmitido(despesa.getProdutor().getId(), despesa.getDataFato(), DATA_EMITIDA);
     Set<Long> plantiosAtuais =
         despesa.getRateios().stream().map(r -> r.getPlantio().getId()).collect(Collectors.toSet());
     Vinculos vinculos = validar(dto, plantiosAtuais);
@@ -138,14 +157,50 @@ public class DespesaService {
 
   /**
    * Remove a despesa manual e todos os rateios dela na mesma transação (RN11). Não trava plantio:
-   * excluir não cria lançamento depois de um encerramento.
+   * excluir não cria lançamento depois de um encerramento. Em período emitido, só o estorno
+   * (CT020).
    */
   @Transactional
   public void excluir(Long id) {
-    Despesa despesa = encontrar(id);
+    Despesa despesa = travar(id);
+    exigirNaoEstornada(despesa);
     exigirDespesaManual(despesa);
-    // TODO(A03b): despesa com data do fato em período já emitido → bloqueio da RN11 (CT020).
+    protecao.exigirNaoEmitido(
+        despesa.getProdutor().getId(), despesa.getDataFato(), EXCLUSAO_EMITIDA);
     repository.delete(despesa);
+  }
+
+  /**
+   * Marca a despesa como estornada (RN11), emitida ou não, manual ou gerada por diária. Rateios e
+   * emissões ficam como estão; nenhuma despesa nova é criada. A apuração e o relatório já deixam a
+   * estornada fora (RN19).
+   */
+  @Transactional
+  public DespesaResposta estornar(Long id) {
+    Despesa despesa = travar(id);
+    if (despesa.isEstornada()) throw new RegraNegocioException(JA_ESTORNADA);
+    despesa.setEstornada(true);
+    return DespesaResposta.de(repository.saveAndFlush(despesa));
+  }
+
+  /**
+   * Trava o produtor da despesa e só então a lê, para a leitura já ver o que outra transação gravou
+   * antes de liberar o lock. Se a despesa mudou de produtor nesse meio-tempo, trava também o novo.
+   */
+  private Despesa travar(Long id) {
+    Long produtorId =
+        repository
+            .buscarProdutorId(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Despesa não encontrada."));
+    protecao.travarProdutor(produtorId);
+    Despesa despesa = encontrar(id);
+    if (!despesa.getProdutor().getId().equals(produtorId))
+      protecao.travarProdutor(despesa.getProdutor().getId());
+    return despesa;
+  }
+
+  private static void exigirNaoEstornada(Despesa despesa) {
+    if (despesa.isEstornada()) throw new RegraNegocioException(ESTORNADA);
   }
 
   private static void exigirDespesaManual(Despesa despesa) {

@@ -87,7 +87,8 @@ public class VendaController {
   @Operation(
       summary = "Altera venda",
       description =
-          "Substitui todos os itens e recalcula os totais; a data de coleta não muda (RN36).")
+          "Substitui todos os itens e recalcula os totais; a data de coleta não muda (RN36). Em"
+              + " período já emitido para o produtor, a data do fato não pode mudar (422).")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public VendaResposta alterar(@PathVariable Long id, @Valid @RequestBody VendaRequisicao dto) {
     return service.alterar(id, dto);
@@ -95,7 +96,11 @@ public class VendaController {
 
   @DeleteMapping("/api/v1/vendas/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(summary = "Exclui venda", description = "Remove a venda e os itens dela.")
+  @Operation(
+      summary = "Exclui venda",
+      description =
+          "Remove a venda e os itens dela. Em período já emitido para o produtor, 422: a venda não"
+              + " tem estorno e se corrige pela alteração.")
   @ApiResponse(responseCode = "204", description = "Operação sem corpo")
   public void excluir(@PathVariable Long id) {
     service.excluir(id);

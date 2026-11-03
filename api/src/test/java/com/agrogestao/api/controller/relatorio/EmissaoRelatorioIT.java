@@ -408,8 +408,9 @@ class EmissaoRelatorioIT extends IntegracaoTest {
         .andExpect(jsonPath("$.total").value(2))
         .andExpect(jsonPath("$.itens[*].id", contains((int) id(e2), (int) id(e1))));
 
-    // A A03b repete os passos 5 e 6 com POST /despesas/{id}/estorno.
-    jdbc.update("update despesa set estornada = TRUE where id = ?", d1);
+    enviar(post("/api/v1/despesas/" + d1 + "/estorno"), "")
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.estornada").value(true));
     String e3 = semestre();
     assertThat(dinheiro(e3, "$.conteudo.custoDesembolso")).isEqualByComparingTo("0.00");
     assertThat(dinheiro(e3, "$.conteudo.resultado")).isEqualByComparingTo("500.00");

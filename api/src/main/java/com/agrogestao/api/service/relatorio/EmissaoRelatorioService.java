@@ -63,7 +63,8 @@ public class EmissaoRelatorioService {
     if (fim.isBefore(inicio)) throw new RegraNegocioException(PERIODO_INVERTIDO);
     Produtor produtor =
         produtores
-            .findById(dto.produtorId())
+            // A03b: trava o produtor, como as exclusões protegidas (ProtecaoEmissao).
+            .buscarParaAtualizar(dto.produtorId())
             .orElseThrow(() -> new RecursoNaoEncontradoException(PRODUTOR_NAO_ENCONTRADO));
     if (produtor.getConsentimentoEm() == null) throw new RegraNegocioException(SEM_CONSENTIMENTO);
 

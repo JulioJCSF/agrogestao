@@ -6,6 +6,7 @@ import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import com.agrogestao.api.service.lancamento.LancamentoService;
+import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
@@ -39,6 +40,12 @@ public class VendaService {
   private final PlantioRepository plantios;
   private final ProducaoRepository producoes;
   private final LancamentoService lancamentos;
+  private final ProtecaoEmissao protecao;
+
+  static final String EXCLUSAO_EMITIDA =
+      "Esta venda já consta em relatório emitido e não pode ser excluída. Corrija pela alteração.";
+  static final String DATA_EMITIDA =
+      "Esta venda já consta em relatório emitido. A data do fato não pode ser alterada.";
 
   public PaginaResposta<VendaResposta> listar(
       Long produtorId, LocalDate periodoInicio, LocalDate periodoFim, PaginacaoConsulta consulta) {
@@ -84,12 +91,17 @@ public class VendaService {
     return resposta(repository.saveAndFlush(venda));
   }
 
-  /** Substitui todos os itens; a data de coleta fica a original (RN36). */
+  /**
+   * Substitui todos os itens; a data de coleta fica a original (RN36). Em período emitido, tudo
+   * continua corrigível menos a data do fato (decisão 2 de 03/11). Trava o produtor antes de ler a
+   * venda e antes dos plantios.
+   */
   @Transactional
   public VendaResposta alterar(Long id, VendaRequisicao dto) {
-    Venda venda = encontrar(id);
+    Venda venda = travar(id);
+    if (!venda.getDataFato().equals(dto.dataFato()))
+      protecao.exigirNaoEmitido(venda.getProdutor().getId(), venda.getDataFato(), DATA_EMITIDA);
     Vinculos vinculos = validar(dto);
-    // TODO(A03b): venda com data do fato em período já emitido → bloqueio da RN11/RN34.
     // Com orphanRemoval, o Hibernate faria os INSERT antes dos DELETE; o flush remove primeiro.
     venda.getItens().clear();
     repository.flush();
@@ -97,11 +109,25 @@ public class VendaService {
     return resposta(repository.saveAndFlush(venda));
   }
 
+  /** Venda não tem estorno: em período emitido, corrige-se pela alteração (decisão 2 de 03/11). */
   @Transactional
   public void excluir(Long id) {
-    Venda venda = encontrar(id);
-    // TODO(A03b): venda com data do fato em período já emitido → bloqueio da RN11/RN34.
+    Venda venda = travar(id);
+    protecao.exigirNaoEmitido(venda.getProdutor().getId(), venda.getDataFato(), EXCLUSAO_EMITIDA);
     repository.delete(venda);
+  }
+
+  /** Trava o produtor da venda e só então a lê; se a venda mudou de produtor, trava o novo. */
+  private Venda travar(Long id) {
+    Long produtorId =
+        repository
+            .buscarProdutorId(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Venda não encontrada."));
+    protecao.travarProdutor(produtorId);
+    Venda venda = encontrar(id);
+    if (!venda.getProdutor().getId().equals(produtorId))
+      protecao.travarProdutor(venda.getProdutor().getId());
+    return venda;
   }
 
   private Venda encontrar(Long id) {
