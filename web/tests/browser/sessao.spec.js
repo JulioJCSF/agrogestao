@@ -1,35 +1,6 @@
 import { test, expect } from '@playwright/test'
-class LoginPage {
-  constructor(page) {
-    this.page = page
-  }
-  campo(id) {
-    return this.page.getByTestId(id)
-  }
-  async abrir() {
-    await this.page.goto('/login')
-  }
-  async logar(login = 'operador-ficticio', senha = 'senha-sintetica') {
-    for (const [id, value] of [
-      ['login-name', login],
-      ['login-password', senha],
-    ]) {
-      await this.campo(id).press('ControlOrMeta+A')
-      await this.campo(id).press('Backspace')
-      await this.campo(id).pressSequentially(value)
-    }
-    await this.campo('login-submit').click()
-  }
-  async sair() {
-    await this.campo('profile-menu').click()
-    await this.campo('logout').click()
-  }
-  async sessao() {
-    return this.page.evaluate(() =>
-      JSON.parse(sessionStorage.getItem('agrogestao-session')),
-    )
-  }
-}
+import { LoginPage } from '../pages/LoginPage.js'
+
 function resposta(perfil = 'LANCAMENTO') {
   return {
     token: 'token-sintetico',

@@ -14,6 +14,7 @@ export function Field({
   type = 'text',
   required = false,
   options,
+  suggestions,
   hint,
   error,
   min,
@@ -25,6 +26,7 @@ export function Field({
 }) {
   const id = props.id || `field-${name}`
   const errorId = `${id}-error`
+  const suggestionsId = suggestions ? `${id}-sugestoes` : undefined
   const display =
     type === 'currency'
       ? displayCurrency(value)
@@ -88,6 +90,7 @@ export function Field({
           min={type === 'number' ? min : undefined}
           max={type === 'number' ? max : undefined}
           step={step}
+          list={suggestionsId}
           placeholder={
             type === 'date'
               ? 'dd/mm/aaaa'
@@ -96,6 +99,13 @@ export function Field({
                 : `Informe ${label.toLowerCase()}`
           }
         />
+      )}
+      {suggestionsId && (
+        <datalist id={suggestionsId} data-testid={suggestionsId}>
+          {suggestions.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
       )}
       {hint && <small>{hint}</small>}
       {error && (
