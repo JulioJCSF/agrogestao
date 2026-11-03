@@ -147,10 +147,7 @@ class LancamentoIT extends IntegracaoTest {
     assertThat(coletaGravada("venda", venda.getId())).isEqualTo(HOJE_EM_FORTALEZA);
   }
 
-  /**
-   * Quando a L01 implementar o endpoint, este teste vira o passo 1 do CT057 e passa a esperar 201
-   * com {@code dataColeta} = 2026-10-11.
-   */
+  /** CT057: a data de coleta enviada pelo operador é ignorada. */
   @Test
   @WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
   void deveIgnorarDataColetaQuandoVierNoCorpoDaRequisicao() throws Exception {
@@ -159,7 +156,7 @@ class LancamentoIT extends IntegracaoTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     "{\"quantidade\":10.000,\"unidadeMedida\":\"kg\",\"dataFato\":\"2026-03-10\",\"dataColeta\":\"2020-01-01\"}"))
-        .andExpect(status().isNotImplemented())
-        .andExpect(jsonPath("$.erro").value("NAO_IMPLEMENTADO"));
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.dataColeta").value("2026-10-11"));
   }
 }

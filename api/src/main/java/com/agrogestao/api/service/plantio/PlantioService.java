@@ -71,7 +71,7 @@ public class PlantioService {
 
   @Transactional
   public PlantioResposta alterar(Long id, PlantioRequisicao dto) {
-    Plantio entidade = encontrar(id);
+    Plantio entidade = encontrarParaAtualizar(id);
     preencher(entidade, dto, entidade.getPropriedade().getProdutor().getId());
     return resposta(repository.saveAndFlush(entidade));
   }
@@ -82,7 +82,7 @@ public class PlantioService {
    */
   @Transactional
   public PlantioResposta encerrar(Long id, EncerramentoPlantioRequisicao dto) {
-    Plantio entidade = encontrar(id);
+    Plantio entidade = encontrarParaAtualizar(id);
     LocalDate encerramento = dto.dataEncerramento();
     if (entidade.getDataEncerramento() != null)
       throw new RegraNegocioException(
@@ -126,6 +126,12 @@ public class PlantioService {
         .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado."));
   }
 
+  private Plantio encontrarParaAtualizar(Long id) {
+    return repository
+        .buscarParaAtualizar(id)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado."));
+  }
+
   /** produtorAtual é nulo na criação; na alteração, trava o plantio no mesmo produtor. */
   private void preencher(Plantio entidade, PlantioRequisicao dto, Long produtorAtual) {
     if (dto.area().signum() <= 0)
@@ -143,8 +149,17 @@ public class PlantioService {
           "O plantio não pode ser transferido para propriedade de outro produtor.");
     Cultura cultura =
         culturas
-            .findById(dto.culturaId())
+            .buscarParaAtualizar(dto.culturaId())
             .orElseThrow(() -> new RecursoNaoEncontradoException("Cultura não encontrada."));
+    if (entidade.getId() != null
+        && producoes.existsByPlantioId(entidade.getId())
+        && !entidade
+            .getCultura()
+            .getUnidadeMedida()
+            .trim()
+            .equalsIgnoreCase(cultura.getUnidadeMedida().trim()))
+      throw new RegraNegocioException(
+          "A cultura do plantio deve manter a unidade da produção já registrada.");
     entidade.setPropriedade(propriedade);
     entidade.setCultura(cultura);
     entidade.setArea(dto.area());
