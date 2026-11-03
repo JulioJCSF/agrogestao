@@ -42,7 +42,8 @@ public class AuthService {
 
   @Transactional(readOnly = true)
   public LoginResposta login(String login, String senha) {
-    Usuario usuario = usuarioRepository.findByLogin(login).orElse(null);
+    // Login sem diferenciar caixa (decisão de 03/11, M01); o da migration vale como foi gravado.
+    Usuario usuario = usuarioRepository.findByLoginIgnoreCase(login.trim()).orElse(null);
     // Login inexistente também passa pelo BCrypt, para o tempo de resposta não revelar se existe.
     boolean senhaConfere =
         passwordEncoder.matches(senha, usuario == null ? hashFicticio : usuario.getSenhaHash());

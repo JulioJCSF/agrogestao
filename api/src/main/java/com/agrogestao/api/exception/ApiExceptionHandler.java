@@ -59,6 +59,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     return responder(CodigoErro.REGRA_NEGOCIO, ex.getMessage(), ex.getCampos());
   }
 
+  @ExceptionHandler(ValidacaoException.class)
+  public ResponseEntity<ErroResposta> handleValidacao(ValidacaoException ex) {
+    return responder(CodigoErro.VALIDACAO, ex.getMessage(), ex.getCampos());
+  }
+
   @ExceptionHandler(RecursoNaoEncontradoException.class)
   public ResponseEntity<ErroResposta> handleRecursoNaoEncontrado(RecursoNaoEncontradoException ex) {
     return responder(CodigoErro.NAO_ENCONTRADO, ex.getMessage(), List.of());

@@ -58,6 +58,18 @@ public class Usuario {
     this.ativo = ativo;
   }
 
+  /** Nome, perfil e situação (RF05). O login não muda; o usuário nunca é excluído (RNF07). */
+  public void alterar(String nome, Perfil perfil, boolean ativo) {
+    this.nome = nome;
+    this.perfil = perfil;
+    this.ativo = ativo;
+  }
+
+  /** Recebe o hash já calculado; a senha em claro nunca chega à entidade. */
+  public void redefinirSenha(String senhaHash) {
+    this.senhaHash = senhaHash;
+  }
+
   public Long getId() {
     return id;
   }
