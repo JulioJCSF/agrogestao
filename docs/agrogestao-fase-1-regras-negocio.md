@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.9
+Versão 1.10
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -88,7 +88,7 @@ Percentual e valor rateado são calculados uma vez, no lançamento, e gravados. 
 Excluir uma despesa remove todos os seus rateios. Despesa já incluída em relatório emitido não pode ser excluída, apenas estornada: a própria despesa é marcada como estornada (`despesa.estornada` no DER), sem lançamento de ajuste à parte. O relatório já emitido não muda (`RN34`).
 **Origem:** RF45, DA05
 
-Na diária paga, a proteção também impede trocar a data do fato quando a despesa gerada está em período já emitido. Assim não é possível deslocar a diária para fora do período e excluir a despesa indiretamente. Valor e quantidade continuam corrigíveis, sem regravar o relatório emitido.
+Na diária paga, a proteção também impede trocar a data do fato quando a despesa gerada está em período já emitido. Assim não é possível deslocar a diária para fora do período e excluir a despesa indiretamente. Até a A03b decidir se despesa em período emitido pode ser alterada (a mesma pendência da despesa manual), valor e quantidade da diária paga continuam corrigíveis, sem regravar o relatório emitido.
 
 ---
 
@@ -98,7 +98,7 @@ Na diária paga, a proteção também impede trocar a data do fato quando a desp
 Toda diária deve ter natureza declarada: paga ou familiar.
 **Origem:** RF24
 
-A natureza não pode ser trocada na alteração. A API responde 422, orientando excluir e registrar outra diária com a natureza correta. Decisão do solicitante na L07 em 29/10/2026, conforme recomendação da Q00c.
+A natureza não pode ser trocada na alteração. A API responde 422, orientando excluir e registrar outra diária com a natureza correta. Decisão do grupo na L07 em 29/10/2026, conforme recomendação da Q00c.
 
 ### RN13 — Valoração da diária familiar
 À diária familiar aplica-se o valor de referência **vigente na data do fato**, copiado para o registro no momento do lançamento. Valor unitário informado no lançamento de diária familiar é ignorado: vale o da referência.
@@ -274,4 +274,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Na versão 1.10, a RN11, a RN12 e a RN13 foram completadas com as decisões da L07 (diária), de 2026-10-29. Nenhuma regra segue pendente.
