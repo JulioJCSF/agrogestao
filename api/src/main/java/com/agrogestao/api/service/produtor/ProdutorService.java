@@ -62,12 +62,12 @@ public class ProdutorService {
     String termo = busca == null ? "" : busca.trim();
     String digitos = termo.replaceAll("\\D", "");
     return PaginaResposta.de(
-        produtorRepository.buscar(termo, digitos, pageable).map(ProdutorService::paraResposta));
+        produtorRepository.buscar(termo, digitos, pageable).map(ProdutorResposta::de));
   }
 
   @Transactional(readOnly = true)
   public ProdutorResposta detalhar(Long id) {
-    return paraResposta(buscar(id));
+    return ProdutorResposta.de(buscar(id));
   }
 
   @Transactional
@@ -77,7 +77,7 @@ public class ProdutorService {
     }
     Produtor produtor = new Produtor();
     copiarCampos(dto, produtor);
-    return paraResposta(produtorRepository.save(produtor));
+    return ProdutorResposta.de(produtorRepository.save(produtor));
   }
 
   /** Também inativa ou reativa ({@code ativo}) e registra ou corrige o consentimento. */
@@ -88,7 +88,7 @@ public class ProdutorService {
       throw documentoDuplicado();
     }
     copiarCampos(dto, produtor);
-    return paraResposta(produtorRepository.save(produtor));
+    return ProdutorResposta.de(produtorRepository.save(produtor));
   }
 
   /** RF09: produtor com histórico é inativado, nunca excluído. */
@@ -128,18 +128,5 @@ public class ProdutorService {
     produtor.setContato(dto.contato());
     produtor.setConsentimentoEm(dto.consentimentoEm());
     produtor.setAtivo(dto.ativo());
-  }
-
-  private static ProdutorResposta paraResposta(Produtor produtor) {
-    return new ProdutorResposta(
-        produtor.getId(),
-        produtor.getNome(),
-        produtor.getDocumento(),
-        produtor.getEndereco(),
-        produtor.getProfissao(),
-        produtor.getContato(),
-        produtor.getConsentimentoEm(),
-        produtor.isAtivo(),
-        produtor.getConsentimentoEm() == null);
   }
 }

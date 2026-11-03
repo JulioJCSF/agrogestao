@@ -18,4 +18,17 @@ public record ProdutorResposta(
     String contato,
     LocalDate consentimentoEm,
     boolean ativo,
-    boolean consentimentoPendente) {}
+    boolean consentimentoPendente) {
+  public static ProdutorResposta de(Produtor produtor) {
+    return new ProdutorResposta(
+        produtor.getId(),
+        produtor.getNome(),
+        produtor.getDocumento(),
+        produtor.getEndereco(),
+        produtor.getProfissao(),
+        produtor.getContato(),
+        produtor.getConsentimentoEm(),
+        produtor.isAtivo(),
+        produtor.getConsentimentoEm() == null);
+  }
+}

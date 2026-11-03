@@ -32,8 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DespesaService {
   private static final BigDecimal CENTAVO = new BigDecimal("0.01");
-  private static final Comparator<RateioDespesa> POR_PLANTIO =
-      Comparator.comparing(rateio -> rateio.getPlantio().getId());
 
   private final DespesaRepository repository;
   private final ProdutorRepository produtores;
@@ -44,7 +42,7 @@ public class DespesaService {
   private final LancamentoService lancamentos;
 
   public DespesaResposta detalhar(Long id) {
-    return resposta(encontrar(id));
+    return DespesaResposta.de(encontrar(id));
   }
 
   /**
@@ -72,7 +70,7 @@ public class DespesaService {
             : rateios.buscarDasDespesas(pagina.map(Despesa::getId).toList()).stream()
                 .collect(Collectors.groupingBy(r -> r.getDespesa().getId()));
     return PaginaResposta.de(
-        pagina.map(d -> resposta(d, porDespesa.getOrDefault(d.getId(), List.of()))));
+        pagina.map(d -> DespesaResposta.de(d, porDespesa.getOrDefault(d.getId(), List.of()))));
   }
 
   /**
@@ -117,7 +115,7 @@ public class DespesaService {
     preencher(despesa, dto, vinculos);
     despesa.setEstornada(false);
     ratear(despesa, dto.valorTotal(), vinculos.plantios());
-    return resposta(repository.saveAndFlush(despesa));
+    return DespesaResposta.de(repository.saveAndFlush(despesa));
   }
 
   @Transactional
@@ -135,7 +133,7 @@ public class DespesaService {
     if (recalcular) {
       ratear(despesa, dto.valorTotal(), vinculos.plantios());
     }
-    return resposta(repository.saveAndFlush(despesa));
+    return DespesaResposta.de(repository.saveAndFlush(despesa));
   }
 
   /**
@@ -257,30 +255,6 @@ public class DespesaService {
       linha.setPercentual(parcela.percentual());
       linha.setValorRateado(parcela.valorRateado());
     }
-  }
-
-  private static DespesaResposta resposta(Despesa d) {
-    return resposta(d, d.getRateios());
-  }
-
-  private static DespesaResposta resposta(Despesa d, List<RateioDespesa> gravados) {
-    return new DespesaResposta(
-        d.getId(),
-        d.getProdutor().getId(),
-        d.getCategoriaDespesa().getId(),
-        d.getDiaria() == null ? null : d.getDiaria().getId(),
-        d.getDescricao(),
-        d.getValorTotal(),
-        d.getDataFato(),
-        d.getDataColeta(),
-        d.isEstornada(),
-        gravados.stream()
-            .sorted(POR_PLANTIO)
-            .map(
-                r ->
-                    new RateioDespesaResposta(
-                        r.getPlantio().getId(), r.getPercentual(), r.getValorRateado()))
-            .toList());
   }
 
   private static DespesaPlantioResposta respostaDoPlantio(RateioDespesa r) {

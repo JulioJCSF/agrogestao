@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.*;
-import java.util.List;
+import java.util.*;
 
 @Schema(
     description = "Resposta do contrato do MVP",
@@ -21,4 +21,29 @@ public record DespesaResposta(
     LocalDate dataFato,
     LocalDate dataColeta,
     boolean estornada,
-    List<RateioDespesaResposta> rateios) {}
+    List<RateioDespesaResposta> rateios) {
+  public static DespesaResposta de(Despesa d) {
+    return de(d, d.getRateios());
+  }
+
+  /** Com os rateios gravados informados, em ordem de plantio (RN10: nunca recalculados). */
+  public static DespesaResposta de(Despesa d, List<RateioDespesa> gravados) {
+    return new DespesaResposta(
+        d.getId(),
+        d.getProdutor().getId(),
+        d.getCategoriaDespesa().getId(),
+        d.getDiaria() == null ? null : d.getDiaria().getId(),
+        d.getDescricao(),
+        d.getValorTotal(),
+        d.getDataFato(),
+        d.getDataColeta(),
+        d.isEstornada(),
+        gravados.stream()
+            .sorted(Comparator.comparing(rateio -> rateio.getPlantio().getId()))
+            .map(
+                r ->
+                    new RateioDespesaResposta(
+                        r.getPlantio().getId(), r.getPercentual(), r.getValorRateado()))
+            .toList());
+  }
+}

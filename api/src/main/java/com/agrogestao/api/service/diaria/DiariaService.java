@@ -33,11 +33,11 @@ public class DiariaService {
     if (!plantios.existsById(plantioId))
       throw new RecursoNaoEncontradoException("Plantio não encontrado.");
     return PaginaResposta.de(
-        repository.findByPlantioId(plantioId, consulta.pageable()).map(DiariaService::resposta));
+        repository.findByPlantioId(plantioId, consulta.pageable()).map(DiariaResposta::de));
   }
 
   public DiariaResposta detalhar(Long id) {
-    return resposta(
+    return DiariaResposta.de(
         repository
             .findById(id)
             .orElseThrow(() -> new RecursoNaoEncontradoException("Diária não encontrada.")));
@@ -71,7 +71,7 @@ public class DiariaService {
       rateios.saveAndFlush(rateio);
       despesa.getRateios().add(rateio);
     }
-    return resposta(diaria);
+    return DiariaResposta.de(diaria);
   }
 
   @Transactional
@@ -92,7 +92,7 @@ public class DiariaService {
       despesa.getRateios().forEach(r -> r.setValorRateado(despesa.getValorTotal()));
       despesas.saveAndFlush(despesa);
     }
-    return resposta(repository.saveAndFlush(diaria));
+    return DiariaResposta.de(repository.saveAndFlush(diaria));
   }
 
   @Transactional
@@ -180,20 +180,5 @@ public class DiariaService {
     despesa.setDescricao("Diária paga de " + diaria.getDataFato().format(DATA));
     despesa.setDataFato(diaria.getDataFato());
     despesa.setValorTotal(total(diaria.getQuantidadeDias(), diaria.getValorUnitario()));
-  }
-
-  private static DiariaResposta resposta(Diaria diaria) {
-    return new DiariaResposta(
-        diaria.getId(),
-        diaria.getPlantio().getId(),
-        diaria.getValorReferenciaDiaria() == null
-            ? null
-            : diaria.getValorReferenciaDiaria().getId(),
-        diaria.getNatureza(),
-        diaria.getQuantidadeDias(),
-        diaria.getValorUnitario(),
-        total(diaria.getQuantidadeDias(), diaria.getValorUnitario()),
-        diaria.getDataFato(),
-        diaria.getDataColeta());
   }
 }

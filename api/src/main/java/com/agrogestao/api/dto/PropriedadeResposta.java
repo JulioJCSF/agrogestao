@@ -11,4 +11,13 @@ import java.time.*;
     example =
         "{\"id\":1,\"produtorId\":1,\"nome\":\"Cadastro Fictício\",\"areaTotal\":5.25,\"localizacao\":null}")
 public record PropriedadeResposta(
-    Long id, Long produtorId, String nome, BigDecimal areaTotal, String localizacao) {}
+    Long id, Long produtorId, String nome, BigDecimal areaTotal, String localizacao) {
+  public static PropriedadeResposta de(Propriedade entidade) {
+    return new PropriedadeResposta(
+        entidade.getId(),
+        entidade.getProdutor().getId(),
+        entidade.getNome(),
+        entidade.getAreaTotal(),
+        entidade.getLocalizacao());
+  }
+}

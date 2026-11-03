@@ -21,11 +21,11 @@ public class PropriedadeService {
     return PaginaResposta.de(
         propriedadeRepository
             .findByProdutorId(produtorId, consulta.pageable())
-            .map(PropriedadeService::resposta));
+            .map(PropriedadeResposta::de));
   }
 
   public PropriedadeResposta detalhar(Long id) {
-    return resposta(encontrar(id));
+    return PropriedadeResposta.de(encontrar(id));
   }
 
   @Transactional
@@ -37,14 +37,14 @@ public class PropriedadeService {
     Propriedade entidade = new Propriedade();
     entidade.setProdutor(produtor);
     preencher(entidade, dto);
-    return resposta(propriedadeRepository.saveAndFlush(entidade));
+    return PropriedadeResposta.de(propriedadeRepository.saveAndFlush(entidade));
   }
 
   @Transactional
   public PropriedadeResposta alterar(Long id, PropriedadeRequisicao dto) {
     Propriedade entidade = encontrar(id);
     preencher(entidade, dto);
-    return resposta(propriedadeRepository.saveAndFlush(entidade));
+    return PropriedadeResposta.de(propriedadeRepository.saveAndFlush(entidade));
   }
 
   private Propriedade encontrar(Long id) {
@@ -57,14 +57,5 @@ public class PropriedadeService {
     entidade.setNome(dto.nome().trim());
     entidade.setAreaTotal(dto.areaTotal());
     entidade.setLocalizacao(dto.localizacao());
-  }
-
-  private static PropriedadeResposta resposta(Propriedade entidade) {
-    return new PropriedadeResposta(
-        entidade.getId(),
-        entidade.getProdutor().getId(),
-        entidade.getNome(),
-        entidade.getAreaTotal(),
-        entidade.getLocalizacao());
   }
 }

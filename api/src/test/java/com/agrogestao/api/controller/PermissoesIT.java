@@ -146,7 +146,7 @@ class PermissoesIT extends IntegracaoTest {
   }
 
   @Test
-  void deveResponder403AntesDo501QuandoConsultaEmitirRelatorio() throws Exception {
+  void deveResponder403QuandoConsultaEmitirRelatorio() throws Exception {
     assertNegado(como(usuarios.bearer(Perfil.CONSULTA), json(post("/api/v1/relatorios"), "{}")));
   }
 
