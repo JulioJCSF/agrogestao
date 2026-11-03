@@ -1,7 +1,7 @@
 package com.agrogestao.api.controller.resultado;
 
 import com.agrogestao.api.dto.*;
-import com.agrogestao.api.exception.ApiNaoImplementadaException;
+import com.agrogestao.api.service.apuracao.ApuracaoResultadoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
@@ -24,23 +24,22 @@ import org.springframework.web.bind.annotation.*;
       description = "Autenticação necessária",
       content = @Content(schema = @Schema(implementation = ErroResposta.class))),
   @ApiResponse(
-      responseCode = "422",
-      description = "Regra de negócio",
-      content = @Content(schema = @Schema(implementation = ErroResposta.class))),
-  @ApiResponse(
-      responseCode = "501",
-      description = "Contrato publicado; implementação em sprint posterior",
+      responseCode = "404",
+      description = "Plantio não encontrado",
       content = @Content(schema = @Schema(implementation = ErroResposta.class)))
 })
 public class ResultadoPlantioController {
+  private final ApuracaoResultadoService service;
 
   @GetMapping("/api/v1/plantios/{id}/resultado")
   @Operation(
       summary = "Apura por ciclo; mês opcional para ciclo curto",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description =
+          "Ciclo longo: do início ao encerramento do plantio, ou até hoje se aberto; mes é"
+              + " ignorado. Ciclo curto: o mês informado, ou o mês corrente (RN24).")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public ResultadoPlantioResposta apurar(
       @PathVariable Long id, @RequestParam(required = false) YearMonth mes) {
-    throw new ApiNaoImplementadaException();
+    return service.apurar(id, mes);
   }
 }
