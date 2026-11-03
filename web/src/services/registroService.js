@@ -1,6 +1,7 @@
 import { api } from './api.js'
-import { sample } from './mockData.js'
-export const mockEnabled = import.meta.env.VITE_USAR_MOCK === 'true'
+// O mock da API (F14) só existe no `npm run dev`; o build de produção sempre fala com a API.
+export const mockEnabled =
+  import.meta.env.DEV && import.meta.env.VITE_USAR_MOCK === 'true'
 export const resources = {
   producers: '/produtores',
   properties: '/propriedades',
@@ -220,12 +221,6 @@ export function toApi(collection, value) {
   }
   return result
 }
-export const readMock = () => structuredClone(sample)
-function unavailableInPreview() {
-  throw new Error(
-    'Esta é uma prévia visual. O registro e as regras de negócio dependem da API.',
-  )
-}
 async function listarPaginas(url, params = {}) {
   const rows = []
   for (let pagina = 0; ; pagina++) {
@@ -236,8 +231,7 @@ async function listarPaginas(url, params = {}) {
     if (rows.length >= data.total || !data.itens.length) return rows
   }
 }
-export async function listarTodos(demo = false, perfil = 'CONSULTA') {
-  if (demo) return readMock()
+export async function listarTodos(perfil = 'CONSULTA') {
   const result = {
     ...Object.fromEntries(Object.keys(resources).map((key) => [key, []])),
     results: [],
@@ -302,9 +296,8 @@ export async function listarTodos(demo = false, perfil = 'CONSULTA') {
   ).flat()
   return result
 }
-export async function salvarRegistro(collection, item, demo = false) {
+export async function salvarRegistro(collection, item) {
   if (!resources[collection]) throw new Error('Tipo de registro desconhecido.')
-  if (demo) unavailableInPreview()
   let url = resources[collection]
   if (!item.id && collection === 'properties')
     url = `/produtores/${item.producerId}/propriedades`
@@ -316,12 +309,10 @@ export async function salvarRegistro(collection, item, demo = false) {
     : await api.post(url, payload)
   return fromApi(collection, data)
 }
-export async function removerRegistro(collection, id, demo = false) {
+export async function removerRegistro(collection, id) {
   if (!resources[collection]) throw new Error('Tipo de registro desconhecido.')
-  if (demo) unavailableInPreview()
   await api.delete(`${resources[collection]}/${id}`)
 }
-export async function encerrarPlantioRegistro(id, endedAt, demo = false) {
-  if (demo) unavailableInPreview()
+export async function encerrarPlantioRegistro(id, endedAt) {
   await api.post(`/plantios/${id}/encerramento`, { dataEncerramento: endedAt })
 }

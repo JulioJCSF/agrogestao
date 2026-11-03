@@ -284,19 +284,18 @@ function AppLayout() {
             </div>
           </div>
         </header>
-        {session.demo && (
-          <div className="demo-banner">
-            Prévia visual com dados fictícios. As operações de cadastro,
-            alteração e exclusão dependem da API.
+        {mockEnabled && (
+          <div className="status-banner" data-testid="mock-banner">
+            Modo mock: dados fictícios em memória, apagados ao recarregar
           </div>
         )}
         {dataLoading && (
-          <div className="demo-banner" role="status">
+          <div className="status-banner" role="status">
             Carregando dados...
           </div>
         )}
         {dataError && (
-          <div className="demo-banner error-banner" role="alert">
+          <div className="status-banner error-banner" role="alert">
             {dataError}
           </div>
         )}
@@ -466,7 +465,7 @@ function GlobalSearch({ onClose }) {
 }
 
 function Login() {
-  const { session, login, enterDemo } = useAuth()
+  const { session, login } = useAuth()
   const navigate = useNavigate()
   const [loginName, setLoginName] = useState('')
   const [password, setPassword] = useState('')
@@ -511,9 +510,10 @@ function Login() {
         </div>
         <form className="login-form" onSubmit={submit}>
           {mockEnabled && (
-            <p className="notice">
-              Modo prévia: use “Explorar prévia” para visualizar as telas com
-              dados fictícios. O login requer a API.
+            <p className="notice" data-testid="mock-logins">
+              Mock da API ligado. Entre com <strong>admin.mock</strong>,{' '}
+              <strong>operador.mock</strong> ou <strong>consulta.mock</strong>,
+              todos com a senha <strong>mock</strong>.
             </p>
           )}
           <TextField className="field" name="login" isRequired>
@@ -554,19 +554,6 @@ function Login() {
             <ArrowRight size={17} />
           </Button>
         </form>
-        <div className="demo-entry">
-          <span>Quer conhecer as telas?</span>
-          <button
-            type="button"
-            data-testid="enter-demo"
-            onClick={() => {
-              enterDemo()
-              navigate('/')
-            }}
-          >
-            Explorar prévia com dados fictícios
-          </button>
-        </div>
       </div>
       <div className="login-art">
         <div className="login-art-content">

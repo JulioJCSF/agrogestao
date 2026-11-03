@@ -109,11 +109,27 @@ npm install
 npm run dev
 ```
 
-Abra o endereço mostrado pelo Vite. Na tela de login, **Explorar prévia com dados fictícios** permite navegar pelas telas e examinar os formulários sem a API. A prévia é somente visual: não salva, altera nem exclui registros. A sessão de prévia fica no `sessionStorage`; os dados fictícios são arquivos estáticos em `web/src/services/mockData.js`.
+Abra o endereço mostrado pelo Vite e entre pelo login. As telas usam `web/src/services/registroService.js`, e o cliente Axios usa `/api/v1`, com proxy local para `http://localhost:8080`.
 
-Para usar a prévia estática, copie `web/.env.example` para `web/.env.local` e inicie o Vite. Com `VITE_USAR_MOCK=true`, o botão **Explorar prévia** mostra inclusive a interface de administração, sem autenticar ninguém. Para solicitar dados reais, use `VITE_USAR_MOCK=false` e reinicie o Vite. O login e as operações reais dependem da API; as telas usam `web/src/services/registroService.js`, e o cliente Axios usa `/api/v1`, com proxy local para `http://localhost:8080`.
+#### Mock da API (F14)
 
-O contrato do MVP está publicado no Swagger pela F13: DTOs, exemplos, paginação e endpoints. Já têm implementação real: autenticação e permissões, produtores, propriedades, culturas, plantios (incluindo encerramento), produção, categorias, lançamento/alteração/detalhe de despesas com rateio, referência de diária e clientes. Os endpoints ainda pendentes respondem `501 NAO_IMPLEMENTADO` até suas próprias issues. O front usa os nomes e URLs desse contrato e mostra a indisponibilidade sem substituir uma sessão real pela prévia. Cálculos de resultado, saldo, rateio e relatório pertencem à API. Os números da prévia são exemplos estáticos.
+Para usar as telas sem a API, copie `web/.env.example` para `web/.env.local` com `VITE_USAR_MOCK=true` e rode `npm run dev`. Para voltar à API real, troque para `VITE_USAR_MOCK=false` e reinicie o Vite.
+
+Com o mock ligado, o MSW responde na camada de rede às mesmas chamadas que as telas fazem à API, no formato dos DTOs da F13, inclusive `ErroResposta` com 400, 401, 403, 404 e 422. Entre com um destes usuários fictícios, todos com a senha `mock`:
+
+| Login | Perfil |
+|---|---|
+| `admin.mock` | ADMIN |
+| `operador.mock` | LANCAMENTO |
+| `consulta.mock` | CONSULTA |
+
+- O mock só existe no `npm run dev`. O build de produção nunca inclui o MSW nem o worker, mesmo com a variável ligada; a homologação usa sempre a API real.
+- Cadastros e lançamentos ficam em memória e somem ao recarregar a página. Todos os dados são fictícios (RNF10).
+- Resultado, saldo, painel e o conteúdo do relatório são exemplos fixos, coerentes com a massa do mock: rateio, apuração e relatório pertencem à API. O mock refaz só o rateio da despesa (RN09), o total da diária paga e o do item de venda, que a tela mostra logo depois de gravar.
+- O código fica em `web/src/mocks/`: `banco.js` (massa), `handlers/` (um arquivo por módulo) e `respostas.js` (formato de erro e paginação).
+- Quando um endpoint mudar na API, ajuste o handler do módulo. `npm run test:mock-cobertura` compara os controllers Java com os handlers e falha se faltar algum; ele roda no CI.
+
+O contrato do MVP está publicado no Swagger pela F13: DTOs, exemplos, paginação e endpoints. Já têm implementação real: autenticação e permissões, produtores, propriedades, culturas, plantios (incluindo encerramento), produção, categorias, lançamento/alteração/detalhe de despesas com rateio, referência de diária e clientes. Os endpoints ainda pendentes respondem `501 NAO_IMPLEMENTADO` até suas próprias issues. O front usa os nomes e URLs desse contrato e mostra a indisponibilidade dos módulos que respondem 501. Cálculos de resultado, saldo, rateio e relatório pertencem à API.
 
 Na produção, omitir `unidadeMedida` usa a unidade da cultura do plantio; uma unidade informada deve ser equivalente a ela (RN38). Testes e comportamento: [casos de produção](docs/qa/casos-de-teste-producao.md).
 
@@ -257,13 +273,16 @@ Em `web/`, com Node 22:
 npm ci
 npm run lint
 npm run build
-npm run smoke
 npm run test:contrato
+npm run test:mock-cobertura
+node --test tests/mock-handlers.test.mjs
 npx playwright install chromium
+npm run smoke
 npm test
+npm run test:mock
 ```
 
-Para usar o Chrome já instalado no Windows, defina `$env:PLAYWRIGHT_CHANNEL='chrome'` antes de `npm test`.
+Para usar o Chrome já instalado no Windows, defina `$env:PLAYWRIGHT_CHANNEL='chrome'` antes de `npm run smoke`, `npm test` e `npm run test:mock`. O `npm run smoke` e o `npm run test:mock` abrem as telas com o mock ligado; o `npm test` usa o mock desligado e intercepta a rede no próprio teste.
 
 `npm run test:api-real` verifica o login e o Bearer no navegador contra a API real, com `VITE_USAR_MOCK=false`. Antes, gere o JAR com `./mvnw verify`. O comando cria PostgreSQL temporário sem volume, gera credenciais sintéticas, sobe a API na porta 18080 e encerra ambos ao terminar. O log fica em `api/target/browser-api.log`. O teste não usa o banco do Compose nem dados reais.
 
