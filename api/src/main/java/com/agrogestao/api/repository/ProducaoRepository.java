@@ -2,6 +2,7 @@ package com.agrogestao.api.repository;
 
 import com.agrogestao.api.model.Producao;
 import java.time.LocalDate;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,9 @@ public interface ProducaoRepository extends JpaRepository<Producao, Long> {
   boolean existsByPlantioCulturaId(Long culturaId);
 
   Page<Producao> findByPlantioId(Long plantioId, Pageable pageable);
+
+  /** Todos os registros do plantio, sem paginação; o recorte por período é da apuração (A01). */
+  List<Producao> findAllByPlantioId(Long plantioId);
 
   boolean existsByPlantioPropriedadeProdutorId(Long produtorId);
 

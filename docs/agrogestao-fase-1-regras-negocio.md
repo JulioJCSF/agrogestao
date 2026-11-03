@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.10
+Versão 1.11
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -167,7 +167,7 @@ O período deriva do tipo de ciclo efetivo do plantio: ciclo longo apura por saf
 **Origem:** RF38, DA05
 
 ### RN25 — Produção e venda são grandezas distintas — **DECIDIDA**
-O relatório apresenta **quantidade produzida** e **quantidade vendida** como números separados. O resultado financeiro é sempre apurado e exibido, inclusive quando negativo.
+O relatório apresenta **quantidade produzida** e **quantidade vendida** como números separados. O resultado financeiro é sempre apurado e exibido, inclusive quando negativo. Na apuração do resultado do plantio, as duas quantidades usam o mesmo período do resultado (`RN24`): a produzida soma as colheitas com data do fato no período, e a vendida soma os itens de venda do plantio cuja venda tem data do fato no período (decisão de 2026-11-03, A01).
 **Origem:** RF36, DA04
 
 > Metade dos associados produz para subsistência: terão custo e nenhuma venda, e o resultado sairá negativo. Isso não é distorção — é o que aconteceu. Separar produção de venda torna a leitura evidente: 500 kg produzidos, 0 kg vendidos, resultado negativo porque nada foi comercializado.
@@ -274,4 +274,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Na versão 1.10, a RN11, a RN12 e a RN13 foram completadas com as decisões da L07 (diária), de 2026-10-29. Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Na versão 1.10, a RN11, a RN12 e a RN13 foram completadas com as decisões da L07 (diária), de 2026-10-29. Na versão 1.11, a RN25 foi completada com a decisão da A01, de 2026-11-03 (quantidades no mesmo período do resultado). Nenhuma regra segue pendente.
