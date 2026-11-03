@@ -104,10 +104,11 @@ public class DespesaController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(
       summary = "Exclui despesas",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description =
+          "Despesa gerada por diária é recusada com 422 (RN16). Exclusão de despesa manual permanece na L04b (501).")
   @ApiResponse(responseCode = "204", description = "Operação sem corpo")
   public void excluir(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    service.excluir(id);
   }
 
   @ApiResponse(

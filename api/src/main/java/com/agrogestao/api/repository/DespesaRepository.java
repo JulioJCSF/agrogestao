@@ -2,11 +2,14 @@ package com.agrogestao.api.repository;
 
 import com.agrogestao.api.model.Despesa;
 import java.time.LocalDate;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface DespesaRepository extends JpaRepository<Despesa, Long> {
+  Optional<Despesa> findByDiariaId(Long diariaId);
+
   boolean existsByCategoriaDespesaId(Long categoriaDespesaId);
 
   boolean existsByProdutorId(Long produtorId);
