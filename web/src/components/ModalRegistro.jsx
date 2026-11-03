@@ -739,7 +739,10 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
               </>
             )}
             {type === 'category' &&
-              field('name', 'Nome da categoria', { required: true })}
+              field('name', 'Nome da categoria', {
+                required: true,
+                maxLength: 80,
+              })}
             {type === 'user' && (
               <>
                 {field('nome', 'Nome completo', { required: true })}

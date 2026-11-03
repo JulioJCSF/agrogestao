@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { apiDaSessao, cpfSintetico, unico } from '../pages/apoioApiReal.js'
 import { ConfiguracoesPage } from '../pages/ConfiguracoesPage.js'
 import { LoginPage } from '../pages/LoginPage.js'
 
@@ -8,43 +9,6 @@ test.skip(
   !process.env.AGROGESTAO_API_REAL,
   'Executar com npm run test:api-real',
 )
-
-const unico = () => crypto.randomUUID().slice(0, 8)
-
-/** CPF sintético válido com prefixo 999 (RNF10). */
-function cpfSintetico() {
-  const base = [9, 9, 9]
-  while (base.length < 9) base.push(Math.floor(Math.random() * 10))
-  for (const tamanho of [9, 10]) {
-    const soma = base
-      .slice(0, tamanho)
-      .reduce((total, digito, i) => total + digito * (tamanho + 1 - i), 0)
-    const resto = (soma * 10) % 11
-    base.push(resto === 10 ? 0 : resto)
-  }
-  return base.join('')
-}
-
-/** Chamadas diretas à API com o Bearer da sessão aberta pela tela. */
-async function apiDaSessao(page) {
-  const { token } = await new LoginPage(page).sessao()
-  const headers = { Authorization: `Bearer ${token}` }
-  return {
-    async get(caminho) {
-      const resposta = await page.request.get(`/api/v1${caminho}`, { headers })
-      expect(resposta.status()).toBe(200)
-      return resposta.json()
-    },
-    async post(caminho, data) {
-      const resposta = await page.request.post(`/api/v1${caminho}`, {
-        headers,
-        data,
-      })
-      expect(resposta.status(), await resposta.text()).toBe(201)
-      return resposta.json()
-    },
-  }
-}
 
 async function telaDeCulturas(page, login, senha) {
   await new LoginPage(page).entrarComo(login, senha)
