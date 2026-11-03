@@ -284,7 +284,7 @@ npm run test:mock
 
 Para usar o Chrome já instalado no Windows, defina `$env:PLAYWRIGHT_CHANNEL='chrome'` antes de `npm run smoke`, `npm test` e `npm run test:mock`. O `npm run smoke` e o `npm run test:mock` abrem as telas com o mock ligado; o `npm test` usa o mock desligado e intercepta a rede no próprio teste.
 
-`npm run test:api-real` verifica o login e o Bearer no navegador contra a API real, com `VITE_USAR_MOCK=false`. Antes, gere o JAR com `./mvnw verify`. O comando cria PostgreSQL temporário sem volume, gera credenciais sintéticas, sobe a API na porta 18080 e encerra ambos ao terminar. O log fica em `api/target/browser-api.log`. O teste não usa o banco do Compose nem dados reais.
+`npm run test:api-real` verifica no navegador, contra a API real e com `VITE_USAR_MOCK=false`, o login e o Bearer (`sessao.spec.js`) e a aba Culturas de Configurações (`culturas.spec.js`). Antes, gere o JAR com `./mvnw verify`. O comando cria PostgreSQL temporário sem volume, gera credenciais sintéticas, sobe a API na porta 18080 e encerra ambos ao terminar. O log fica em `api/target/browser-api.log`. O teste não usa o banco do Compose nem dados reais.
 
 A página de exemplo dos componentes está em `/tests/components.html` durante o desenvolvimento. Ela não aparece no menu e não é incluída no build de produção. Os componentes reutilizáveis estão em `web/src/components/`.
 

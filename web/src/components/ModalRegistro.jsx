@@ -120,6 +120,9 @@ function initialValues(type, item, defaults, data) {
   return { ...base[type], ...defaults }
 }
 
+// Texto livre, como a API aceita (até 10 caracteres); as sugestões não limitam o valor.
+const unidadesSugeridas = ['kg', 'un', 'saca', 'cx', 'molho', 'mão', 'cento']
+
 export function ModalRegistro({ modal, onClose, notify, openModal }) {
   const { data, save, encerrarPlantio } = useData()
   const navigate = useNavigate()
@@ -364,7 +367,10 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
             )}
             {type === 'culture' && (
               <>
-                {field('name', 'Nome da cultura', { required: true })}
+                {field('name', 'Nome da cultura', {
+                  required: true,
+                  maxLength: 100,
+                })}
                 <div className="form-grid">
                   {field('cycle', 'Tipo de ciclo', {
                     options: [
@@ -373,11 +379,9 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
                     ],
                   })}
                   {field('unit', 'Unidade de medida', {
-                    options: [
-                      { value: 'kg', label: 'kg' },
-                      { value: 'un', label: 'un' },
-                      { value: 'saca', label: 'saca' },
-                    ],
+                    required: true,
+                    maxLength: 10,
+                    suggestions: unidadesSugeridas,
                   })}
                 </div>
               </>
