@@ -9,6 +9,7 @@ import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import com.agrogestao.api.service.lancamento.LancamentoService;
+import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
@@ -29,13 +30,22 @@ class DespesaServiceTest {
   CategoriaDespesaRepository categorias = mock(CategoriaDespesaRepository.class);
   PlantioRepository plantios = mock(PlantioRepository.class);
   RateioDespesaRepository rateios = mock(RateioDespesaRepository.class);
+  EmissaoRelatorioRepository emissoes = mock(EmissaoRelatorioRepository.class);
   RateioDespesaService rateio = spy(new RateioDespesaService());
   LancamentoService lancamentos =
       spy(
           new LancamentoService(
               Clock.fixed(Instant.parse("2026-10-12T01:30:00Z"), ZoneId.of("America/Fortaleza"))));
   DespesaService service =
-      new DespesaService(repo, produtores, categorias, plantios, rateios, rateio, lancamentos);
+      new DespesaService(
+          repo,
+          produtores,
+          categorias,
+          plantios,
+          rateios,
+          rateio,
+          lancamentos,
+          new ProtecaoEmissao(emissoes, produtores));
 
   Produtor produtor = comId(new Produtor(), 1L);
   Produtor vizinho = comId(new Produtor(), 9L);
@@ -67,6 +77,10 @@ class DespesaServiceTest {
     diaria.setNome("Diária");
     diaria.setSistema(true);
     when(produtores.findById(1L)).thenReturn(Optional.of(produtor));
+    // A03b: o produtor é travado antes de a despesa ser lida.
+    when(produtores.buscarParaAtualizar(1L)).thenReturn(Optional.of(produtor));
+    when(repo.buscarProdutorId(anyLong()))
+        .thenAnswer(inv -> repo.findById(inv.getArgument(0)).map(d -> d.getProdutor().getId()));
     when(categorias.findById(2L)).thenReturn(Optional.of(adubo));
     when(categorias.findById(3L)).thenReturn(Optional.of(diaria));
     when(plantios.findAllById(any()))
@@ -391,5 +405,151 @@ class DespesaServiceTest {
         .isInstanceOf(RecursoNaoEncontradoException.class)
         .hasMessage("Plantio não encontrado.");
     verifyNoInteractions(rateios);
+  }
+
+  // A03b
+
+  static final String JA_ESTORNADA = "Esta despesa já foi estornada.";
+  static final String ESTORNADA =
+      "Esta despesa foi estornada e não pode mais ser alterada nem excluída.";
+  static final String EXCLUSAO_EMITIDA =
+      "Esta despesa já consta em relatório emitido e não pode ser excluída. Use o estorno.";
+  static final String DATA_EMITIDA =
+      "Esta despesa já consta em relatório emitido. A data do fato não pode ser alterada.";
+  static final String GERADA =
+      "Esta despesa foi gerada por uma diária paga. Altere ou exclua a diária.";
+
+  void emitido() {
+    when(emissoes.existeEmissaoNoPeriodo(1L, FATO)).thenReturn(true);
+  }
+
+  void rejeitaSemGravar(org.assertj.core.api.ThrowableAssert.ThrowingCallable chamada, String msg) {
+    assertThatThrownBy(chamada).isInstanceOf(RegraNegocioException.class).hasMessage(msg);
+    verify(repo, never()).saveAndFlush(any());
+    verify(repo, never()).save(any());
+    verify(repo, never()).delete(any(Despesa.class));
+  }
+
+  static DespesaRequisicao comData(LocalDate data) {
+    return new DespesaRequisicao(
+        1L, 2L, "Adubo de teste", new BigDecimal("90.00"), data, List.of(11L, 12L));
+  }
+
+  @Test
+  void deveMarcarEstornadaPreservandoRateiosSemCriarDespesaQuandoEstornar() {
+    Despesa despesa = existente(5L, null);
+    emitido();
+    clearInvocations(rateio);
+    DespesaResposta resposta = service.estornar(5L);
+    assertThat(resposta.estornada()).isTrue();
+    assertThat(resposta.id()).isEqualTo(5L);
+    assertThat(resposta.rateios())
+        .extracting(RateioDespesaResposta::valorRateado)
+        .usingElementComparator(BigDecimal::compareTo)
+        .containsExactly(new BigDecimal("45.00"), new BigDecimal("45.00"));
+    assertThat(despesa.isEstornada()).isTrue();
+    verify(repo).saveAndFlush(same(despesa));
+    verify(repo, never()).save(any());
+    verify(repo, never()).delete(any(Despesa.class));
+    verifyNoInteractions(rateio);
+  }
+
+  @Test
+  void deveEstornarQuandoDespesaForGeradaPorDiaria() {
+    existente(5L, comId(new Diaria(), 40L));
+    assertThat(service.estornar(5L).estornada()).isTrue();
+  }
+
+  @Test
+  void deveRecusarSemGravarQuandoEstornarDeNovo() {
+    existente(5L, null).setEstornada(true);
+    rejeitaSemGravar(() -> service.estornar(5L), JA_ESTORNADA);
+  }
+
+  @Test
+  void deveResponder404SemTravarQuandoEstornarDespesaInexistente() {
+    when(repo.findById(77L)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.estornar(77L))
+        .isInstanceOf(RecursoNaoEncontradoException.class)
+        .hasMessage("Despesa não encontrada.");
+    verify(produtores, never()).buscarParaAtualizar(anyLong());
+  }
+
+  @Test
+  void deveRecusarAlterarEExcluirComMensagemDeEstornadaQuandoTambemEstiverEmitidaEGerada() {
+    existente(5L, comId(new Diaria(), 40L)).setEstornada(true);
+    emitido();
+    rejeitaSemGravar(() -> service.excluir(5L), ESTORNADA);
+    rejeitaSemGravar(() -> service.alterar(5L, comData(FATO.plusDays(1))), ESTORNADA);
+  }
+
+  @Test
+  void deveRecusarComRn16AntesDoPeriodoEmitidoQuandoDespesaForGeradaPorDiaria() {
+    existente(5L, comId(new Diaria(), 40L));
+    emitido();
+    rejeitaSemGravar(() -> service.excluir(5L), GERADA);
+    rejeitaSemGravar(() -> service.alterar(5L, comData(FATO.plusDays(1))), GERADA);
+  }
+
+  @Test
+  void deveRecusarExclusaoComAMensagemDoCt020QuandoEstiverEmPeriodoEmitido() {
+    existente(5L, null);
+    emitido();
+    rejeitaSemGravar(() -> service.excluir(5L), EXCLUSAO_EMITIDA);
+    verify(emissoes).existeEmissaoNoPeriodo(1L, FATO);
+  }
+
+  @Test
+  void deveExcluirQuandoDataDoFatoEstiverForaDePeriodoEmitido() {
+    Despesa despesa = existente(5L, null);
+    service.excluir(5L);
+    verify(repo).delete(despesa);
+  }
+
+  @Test
+  void deveRecusarTrocaDaDataSemGravarQuandoEstiverEmPeriodoEmitido() {
+    Despesa despesa = existente(5L, null);
+    emitido();
+    rejeitaSemGravar(() -> service.alterar(5L, comData(FATO.plusDays(1))), DATA_EMITIDA);
+    assertThat(despesa.getDataFato()).isEqualTo(FATO);
+  }
+
+  @Test
+  void deveAceitarCorrecaoDoValorERecalcularRateioQuandoEstiverEmPeriodoEmitido() {
+    existente(5L, null);
+    emitido();
+    DespesaResposta resposta = service.alterar(5L, entrada("120.00", List.of(11L, 12L)));
+    assertThat(resposta.valorTotal()).isEqualByComparingTo("120.00");
+    assertThat(resposta.rateios())
+        .extracting(RateioDespesaResposta::valorRateado)
+        .usingElementComparator(BigDecimal::compareTo)
+        .containsExactly(new BigDecimal("60.00"), new BigDecimal("60.00"));
+    verify(rateio).ratear(eq(new BigDecimal("120.00")), anyList());
+    // A data não mudou: nem consulta o período emitido.
+    verify(emissoes, never()).existeEmissaoNoPeriodo(anyLong(), any());
+  }
+
+  @Test
+  void deveTravarProdutorAntesDaDespesaEDosPlantiosQuandoAlterarExcluirOuEstornar() {
+    existente(5L, null);
+    service.alterar(5L, entrada("90.00", List.of(11L, 12L)));
+    var ordem = inOrder(produtores, repo, plantios);
+    ordem.verify(produtores).buscarParaAtualizar(1L);
+    ordem.verify(repo).findById(5L);
+    ordem.verify(plantios).buscarParaAtualizar(11L);
+
+    clearInvocations(produtores, repo, plantios);
+    service.estornar(5L);
+    var estorno = inOrder(produtores, repo);
+    estorno.verify(produtores).buscarParaAtualizar(1L);
+    estorno.verify(repo).findById(5L);
+
+    existente(6L, null);
+    service.excluir(6L);
+    var exclusao = inOrder(produtores, repo, emissoes);
+    exclusao.verify(produtores).buscarParaAtualizar(1L);
+    exclusao.verify(repo).findById(6L);
+    exclusao.verify(emissoes).existeEmissaoNoPeriodo(1L, FATO);
+    exclusao.verify(repo).delete(any(Despesa.class));
   }
 }

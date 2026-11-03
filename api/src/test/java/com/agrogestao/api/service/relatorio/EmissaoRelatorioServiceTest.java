@@ -73,7 +73,7 @@ class EmissaoRelatorioServiceTest {
     milho.setNome("Milho");
     milho.setUnidadeMedida("kg");
 
-    when(produtores.findById(1L)).thenReturn(Optional.of(produtor));
+    when(produtores.buscarParaAtualizar(1L)).thenReturn(Optional.of(produtor));
     when(propriedades.findAllByProdutorIdOrderById(1L)).thenReturn(List.of(propriedade));
     when(plantios.buscarDoProdutorComCultura(1L)).thenReturn(doProdutor);
     when(despesas.buscarDoRelatorio(1L, INICIO, FIM)).thenReturn(List.of());

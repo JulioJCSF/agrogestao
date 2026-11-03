@@ -13,6 +13,13 @@ public interface DespesaRepository
     extends JpaRepository<Despesa, Long>, JpaSpecificationExecutor<Despesa> {
   Optional<Despesa> findByDiariaId(Long diariaId);
 
+  /**
+   * Só o produtor da despesa, sem carregar a entidade: o produtor é travado antes de a despesa ser
+   * lida (A03b).
+   */
+  @Query("select d.produtor.id from Despesa d where d.id = :id")
+  Optional<Long> buscarProdutorId(@Param("id") Long id);
+
   boolean existsByCategoriaDespesaId(Long categoriaDespesaId);
 
   boolean existsByProdutorId(Long produtorId);

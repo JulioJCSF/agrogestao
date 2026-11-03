@@ -6,6 +6,7 @@ import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import com.agrogestao.api.service.lancamento.LancamentoService;
+import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
 import java.math.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -26,8 +27,11 @@ public class DiariaService {
   private final CategoriaDespesaRepository categorias;
   private final DespesaRepository despesas;
   private final RateioDespesaRepository rateios;
-  private final EmissaoRelatorioRepository emissoes;
   private final LancamentoService lancamentos;
+  private final ProtecaoEmissao protecao;
+
+  static final String DESPESA_ESTORNADA =
+      "A despesa desta diária foi estornada. A diária não pode mais ser alterada nem excluída.";
 
   public PaginaResposta<DiariaResposta> listar(Long plantioId, PaginacaoConsulta consulta) {
     if (!plantios.existsById(plantioId))
@@ -76,8 +80,9 @@ public class DiariaService {
 
   @Transactional
   public DiariaResposta alterar(Long id, DiariaRequisicao dto) {
-    Diaria diaria = bloquearDiaria(id);
+    Diaria diaria = travar(id);
     diaria.setPlantio(bloquearPlantio(diaria.getPlantio().getId()));
+    exigirDespesaNaoEstornada(diaria);
     if (diaria.getNatureza() != dto.natureza())
       throw new RegraNegocioException(
           "A natureza da diária não pode ser alterada. Exclua a diária e registre outra com a natureza correta.",
@@ -97,8 +102,9 @@ public class DiariaService {
 
   @Transactional
   public void excluir(Long id) {
-    Diaria diaria = bloquearDiaria(id);
+    Diaria diaria = travar(id);
     bloquearPlantio(diaria.getPlantio().getId());
+    exigirDespesaNaoEstornada(diaria);
     if (diaria.getNatureza() == NaturezaDiaria.PAGA) {
       Despesa despesa = despesaGerada(id);
       exigirDespesaNaoEmitida(despesa);
@@ -106,6 +112,24 @@ public class DiariaService {
       despesas.flush();
     }
     repository.delete(diaria);
+  }
+
+  /**
+   * Ordem de locks da A03b: produtor, diária e plantio. O produtor é lido sem carregar a diária,
+   * para a diária travada em seguida já vir com o que outra transação gravou.
+   */
+  private Diaria travar(Long id) {
+    protecao.travarProdutor(
+        repository
+            .buscarProdutorId(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Diária não encontrada.")));
+    return bloquearDiaria(id);
+  }
+
+  /** Decisão 3 de 03/11: a diária paga acompanha a despesa estornada e fica congelada. */
+  private void exigirDespesaNaoEstornada(Diaria diaria) {
+    if (diaria.getNatureza() == NaturezaDiaria.PAGA && despesaGerada(diaria.getId()).isEstornada())
+      throw new RegraNegocioException(DESPESA_ESTORNADA);
   }
 
   private Diaria bloquearDiaria(Long id) {
@@ -130,9 +154,10 @@ public class DiariaService {
   }
 
   private void exigirDespesaNaoEmitida(Despesa despesa) {
-    if (emissoes.existeEmissaoNoPeriodo(despesa.getProdutor().getId(), despesa.getDataFato()))
-      throw new RegraNegocioException(
-          "A despesa desta diária já consta em relatório emitido. Não altere a data nem exclua a diária. Use o estorno da despesa.");
+    protecao.exigirNaoEmitido(
+        despesa.getProdutor().getId(),
+        despesa.getDataFato(),
+        "A despesa desta diária já consta em relatório emitido. Não altere a data nem exclua a diária. Use o estorno da despesa.");
   }
 
   private void preencher(Diaria diaria, DiariaRequisicao dto) {

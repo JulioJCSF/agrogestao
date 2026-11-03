@@ -10,6 +10,7 @@ import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import com.agrogestao.api.service.lancamento.LancamentoService;
+import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
@@ -35,6 +36,7 @@ class VendaServiceTest {
   ClienteRepository clientes = mock(ClienteRepository.class);
   PlantioRepository plantios = mock(PlantioRepository.class);
   ProducaoRepository producoes = mock(ProducaoRepository.class);
+  EmissaoRelatorioRepository emissoes = mock(EmissaoRelatorioRepository.class);
   Clock relogio =
       Clock.fixed(
           OffsetDateTime.parse("2026-10-11T12:00:00-03:00").toInstant(),
@@ -42,7 +44,14 @@ class VendaServiceTest {
   LancamentoService lancamentos = spy(new LancamentoService(relogio));
   VendaService service =
       new VendaService(
-          repository, itensVenda, produtores, clientes, plantios, producoes, lancamentos);
+          repository,
+          itensVenda,
+          produtores,
+          clientes,
+          plantios,
+          producoes,
+          lancamentos,
+          new ProtecaoEmissao(emissoes, produtores));
 
   Cultura milho = new Cultura();
   Map<Long, Plantio> cadastrados = new HashMap<>();
@@ -62,6 +71,11 @@ class VendaServiceTest {
     producao(1L, "100.000");
     producao(3L, "100.000");
     when(produtores.findById(PRODUTOR)).thenReturn(Optional.of(produtor));
+    // A03b: o produtor é travado antes de a venda ser lida.
+    when(produtores.buscarParaAtualizar(PRODUTOR)).thenReturn(Optional.of(produtor));
+    when(repository.buscarProdutorId(anyLong()))
+        .thenAnswer(
+            inv -> repository.findById(inv.getArgument(0)).map(v -> v.getProdutor().getId()));
     when(clientes.findById(CLIENTE)).thenReturn(Optional.of(entidade(new Cliente(), CLIENTE)));
     when(plantios.buscarParaAtualizar(anyLong()))
         .thenAnswer(inv -> Optional.ofNullable(cadastrados.get(inv.<Long>getArgument(0))));
@@ -452,5 +466,73 @@ class VendaServiceTest {
         .isInstanceOf(RegraNegocioException.class)
         .hasMessage("O fim do período não pode ser anterior ao início.");
     verifyNoInteractions(repository);
+  }
+
+  // A03b
+
+  static final String EXCLUSAO_EMITIDA =
+      "Esta venda já consta em relatório emitido e não pode ser excluída. Corrija pela alteração.";
+  static final String DATA_EMITIDA =
+      "Esta venda já consta em relatório emitido. A data do fato não pode ser alterada.";
+
+  void emitido() {
+    when(emissoes.existeEmissaoNoPeriodo(PRODUTOR, DATA_FATO)).thenReturn(true);
+  }
+
+  @Test
+  void deveRecusarExclusaoSemApagarQuandoVendaEstiverEmPeriodoEmitido() {
+    existente(50L);
+    emitido();
+    assertThatThrownBy(() -> service.excluir(50L))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(EXCLUSAO_EMITIDA);
+    verify(repository, never()).delete(any(Venda.class));
+  }
+
+  @Test
+  void deveExcluirQuandoVendaEstiverForaDePeriodoEmitido() {
+    Venda venda = existente(50L);
+    service.excluir(50L);
+    verify(repository).delete(venda);
+  }
+
+  @Test
+  void deveRecusarTrocaDaDataSemGravarQuandoVendaEstiverEmPeriodoEmitido() {
+    Venda venda = existente(50L);
+    emitido();
+    VendaRequisicao outraData =
+        new VendaRequisicao(
+            PRODUTOR, CLIENTE, DATA_FATO.plusDays(1), List.of(item(1L, "1.000", "kg", "2.00")));
+    assertThatThrownBy(() -> service.alterar(50L, outraData))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(DATA_EMITIDA);
+    verify(repository, never()).saveAndFlush(any());
+    assertThat(venda.getDataFato()).isEqualTo(DATA_FATO);
+    assertThat(venda.getItens()).hasSize(1);
+  }
+
+  @Test
+  void deveAceitarCorrecaoDaQuantidadeQuandoVendaEstiverEmPeriodoEmitido() {
+    existente(50L);
+    emitido();
+    VendaResposta resposta = service.alterar(50L, venda(item(1L, "20.000", "kg", "4.50")));
+    assertThat(resposta.valorTotal()).isEqualByComparingTo("90.00");
+    verify(emissoes, never()).existeEmissaoNoPeriodo(anyLong(), any());
+  }
+
+  @Test
+  void deveTravarProdutorAntesDaVendaEDosPlantiosQuandoAlterarOuExcluir() {
+    existente(50L);
+    service.alterar(50L, venda(item(1L, "1.000", "kg", "2.00")));
+    InOrder ordem = inOrder(produtores, repository, plantios);
+    ordem.verify(produtores).buscarParaAtualizar(PRODUTOR);
+    ordem.verify(repository).findById(50L);
+    ordem.verify(plantios).buscarParaAtualizar(1L);
+
+    clearInvocations(produtores, repository);
+    service.excluir(50L);
+    InOrder exclusao = inOrder(produtores, repository);
+    exclusao.verify(produtores).buscarParaAtualizar(PRODUTOR);
+    exclusao.verify(repository).delete(any(Venda.class));
   }
 }

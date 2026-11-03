@@ -1,7 +1,6 @@
 package com.agrogestao.api.controller.despesa;
 
 import com.agrogestao.api.dto.*;
-import com.agrogestao.api.exception.ApiNaoImplementadaException;
 import com.agrogestao.api.service.despesa.DespesaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -89,7 +88,8 @@ public class DespesaController {
       summary = "Altera despesa",
       description =
           "Recalcula o rateio com as áreas atuais só se mudarem o valor ou os plantios; senão"
-              + " mantém o rateio gravado (RN05).")
+              + " mantém o rateio gravado (RN05). Em período já emitido para o produtor, a data do"
+              + " fato não pode mudar (422); despesa estornada não é alterada (422).")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public DespesaResposta alterar(@PathVariable Long id, @Valid @RequestBody DespesaRequisicao dto) {
     return service.alterar(id, dto);
@@ -101,7 +101,8 @@ public class DespesaController {
       summary = "Exclui despesa",
       description =
           "Remove a despesa manual e os rateios dela (RN11). Despesa gerada por diária é recusada"
-              + " com 422 (RN16).")
+              + " com 422 (RN16). Em período já emitido para o produtor, 422: use o estorno."
+              + " Despesa estornada não é excluída (422).")
   @ApiResponse(responseCode = "204", description = "Operação sem corpo")
   public void excluir(@PathVariable Long id) {
     service.excluir(id);
@@ -123,24 +124,29 @@ public class DespesaController {
     return service.listarPorPlantio(plantioId, periodoInicio, periodoFim, consulta);
   }
 
-  @ApiResponse(
-      responseCode = "501",
-      description = "Estorno pertence a A03b",
-      content = @Content(schema = @Schema(implementation = ErroResposta.class)))
   @PostMapping("/api/v1/despesas/{id}/estorno")
   @Operation(
       summary = "Estorna preservando os rateios e emissões",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description =
+          "Marca a despesa como estornada (RN11): vale para qualquer despesa, emitida ou não,"
+              + " inclusive a gerada por diária paga. Não cria lançamento de ajuste; rateios e"
+              + " emissões já gravadas não mudam. A estornada sai das apurações novas (RN19) e não"
+              + " aceita mais alteração nem exclusão. Já estornada: 422.")
   @ResponseStatus(HttpStatus.CREATED)
   @ApiResponse(
       responseCode = "201",
-      description = "Criado com Location",
+      description = "Estornada; Location aponta para a própria despesa",
       headers =
           @Header(
               name = "Location",
-              description = "URL do recurso criado",
+              description = "URL da despesa estornada",
               schema = @Schema(type = "string", format = "uri")))
+  @ApiResponse(
+      responseCode = "404",
+      description = "Despesa inexistente",
+      content = @Content(schema = @Schema(implementation = ErroResposta.class)))
   public ResponseEntity<DespesaResposta> estornar(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    var resposta = service.estornar(id);
+    return ResponseEntity.created(URI.create("/api/v1/despesas/" + resposta.id())).body(resposta);
   }
 }

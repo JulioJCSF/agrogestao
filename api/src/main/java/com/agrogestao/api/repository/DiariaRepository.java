@@ -23,6 +23,13 @@ public interface DiariaRepository extends JpaRepository<Diaria, Long> {
 
   boolean existsByPlantioPropriedadeProdutorId(Long produtorId);
 
+  /**
+   * Só o produtor da diária, sem carregar a entidade: o produtor é travado antes da diária e do
+   * plantio (A03b).
+   */
+  @Query("select d.plantio.propriedade.produtor.id from Diaria d where d.id = :id")
+  Optional<Long> buscarProdutorId(@Param("id") Long id);
+
   /** Maior data do fato entre as diárias do plantio; nula se não houver (C06b). */
   @Query("select max(d.dataFato) from Diaria d where d.plantio.id = :plantioId")
   LocalDate ultimaDataFatoDoPlantio(@Param("plantioId") Long plantioId);
