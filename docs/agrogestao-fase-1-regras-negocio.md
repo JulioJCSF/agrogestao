@@ -46,7 +46,7 @@ Alterar a área de um plantio não recalcula rateios já gravados.
 A unidade de cada colheita deve ser a da cultura do plantio. Quando omitida, a API a preenche; quando informada, compara ignorando espaços nas pontas e diferença entre maiúsculas e minúsculas e grava a grafia da cultura. Unidade diferente é rejeitada com HTTP 422.
 
 A unidade da cultura não pode ser alterada quando já há produção em seus plantios. Um plantio com produção também não pode trocar para cultura de unidade diferente. Nenhuma quantidade histórica é convertida ou regravada.
-**Origem:** RF15, RF16, RN30; decisão do solicitante na L01 em 29/10/2026, fechando a lacuna da Q00d/Q00e sobre soma de colheitas em unidades diferentes.
+**Origem:** RF15, RF16, RN30; decisão do grupo na L01 em 29/10/2026, fechando a lacuna da Q00d/Q00e sobre soma de colheitas em unidades diferentes.
 
 ---
 
