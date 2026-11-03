@@ -103,6 +103,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      - run: npm run test:contrato
+      # F14: falha quando a API ganha endpoint sem handler no mock.
+      - run: npm run test:mock-cobertura
 
   ci-ok:
     name: ci-ok

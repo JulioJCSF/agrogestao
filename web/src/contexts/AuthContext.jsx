@@ -5,7 +5,6 @@ const KEY = 'agrogestao-session'
 function readSession() {
   try {
     const session = JSON.parse(sessionStorage.getItem(KEY))
-    if (session?.demo) return { demo: true, token: null, user: session.user }
     if (
       !session?.token ||
       !session?.user ||
@@ -37,7 +36,7 @@ export function AuthProvider({ children }) {
       window.removeEventListener('agrogestao-session-expired', expired)
   }, [])
   useEffect(() => {
-    if (!session?.token || session.demo) return
+    if (!session?.token) return
     let active = true
     api
       .get('/auth/me')
@@ -66,7 +65,7 @@ export function AuthProvider({ children }) {
       active = false
       window.clearTimeout(timer)
     }
-  }, [session?.token, session?.demo, session?.expiraEm])
+  }, [session?.token, session?.expiraEm])
   function persist(next) {
     if (next) sessionStorage.setItem(KEY, JSON.stringify(next))
     else sessionStorage.removeItem(KEY)
@@ -79,17 +78,9 @@ export function AuthProvider({ children }) {
       token: data.token,
       expiraEm: data.expiraEm,
       user: data.usuario,
-      demo: false,
     }
     persist(next)
     return next
-  }
-  function enterDemo() {
-    persist({
-      token: null,
-      demo: true,
-      user: { nome: 'Prévia AgroGestão', perfil: 'ADMIN' },
-    })
   }
   return (
     <AuthContext.Provider
@@ -97,7 +88,6 @@ export function AuthProvider({ children }) {
         session,
         restoring,
         login,
-        enterDemo,
         logout: () => persist(null),
       }}
     >

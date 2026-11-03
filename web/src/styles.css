@@ -314,7 +314,7 @@ p {
 .profile-popover button:hover {
   background: #f1f6ee;
 }
-.demo-banner {
+.status-banner {
   padding: 7px 36px;
   background: #edf4e8;
   color: #627967;
@@ -1469,22 +1469,6 @@ td .allocation-detail {
   justify-content: space-between;
   padding: 13px 16px;
 }
-.demo-entry {
-  border-top: 1px solid #e6ebe3;
-  margin-top: 34px;
-  padding-top: 25px;
-  display: grid;
-  gap: 8px;
-  text-align: center;
-  color: #8a9a8c;
-  font-size: 12px;
-}
-.demo-entry button {
-  border: 0;
-  background: none;
-  color: #2c7147;
-  font-weight: 700;
-}
 .login-art {
   background: linear-gradient(135deg, #144a34, #427d4d 68%, #a2b86a);
   position: relative;
@@ -1604,7 +1588,7 @@ td .allocation-detail {
   .content {
     padding: 24px 16px 45px;
   }
-  .demo-banner {
+  .status-banner {
     padding: 7px 16px;
   }
   .page-heading {
@@ -1762,7 +1746,7 @@ td .allocation-detail {
   }
   .sidebar,
   .topbar,
-  .demo-banner,
+  .status-banner,
   .report-actions,
   .toast,
   .modal-backdrop,

@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from './AuthContext.jsx'
 import {
   listarTodos,
-  readMock,
   removerRegistro,
   salvarRegistro,
   encerrarPlantioRegistro,
@@ -31,9 +30,7 @@ const emptyData = {
 
 export function DataProvider({ children }) {
   const { session } = useAuth()
-  const [data, setData] = useState(() =>
-    session?.demo ? readMock() : emptyData,
-  )
+  const [data, setData] = useState(emptyData)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   useEffect(() => {
@@ -42,10 +39,10 @@ export function DataProvider({ children }) {
       setError('')
       return
     }
-    setData(session.demo ? readMock() : emptyData)
+    setData(emptyData)
     let active = true
     setLoading(true)
-    listarTodos(session.demo, session.user?.perfil)
+    listarTodos(session.user?.perfil)
       .then((result) => {
         if (active) {
           setData(result)
@@ -64,19 +61,19 @@ export function DataProvider({ children }) {
   }, [session])
 
   async function save(collection, item) {
-    const value = await salvarRegistro(collection, item, session?.demo)
-    setData(await listarTodos(session?.demo, session?.user?.perfil))
+    const value = await salvarRegistro(collection, item)
+    setData(await listarTodos(session?.user?.perfil))
     return value
   }
 
   async function remove(collection, id) {
-    await removerRegistro(collection, id, session?.demo)
-    setData(await listarTodos(session?.demo, session?.user?.perfil))
+    await removerRegistro(collection, id)
+    setData(await listarTodos(session?.user?.perfil))
   }
 
   async function encerrarPlantio(id, endedAt) {
-    await encerrarPlantioRegistro(id, endedAt, session?.demo)
-    setData(await listarTodos(session?.demo, session?.user?.perfil))
+    await encerrarPlantioRegistro(id, endedAt)
+    setData(await listarTodos(session?.user?.perfil))
   }
 
   return (

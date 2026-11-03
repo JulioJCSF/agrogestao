@@ -15,7 +15,9 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "smoke": "node tests/smoke.mjs",
-    "format": "prettier --write src tests index.html"
+    "format": "prettier --write src tests index.html",
+    "test:mock-cobertura": "node --test tests/mock-cobertura.test.mjs",
+    "test:mock": "playwright test -c playwright.mock.config.js"
   },
   "dependencies": {
     "@heroui/react": "^3.2.5",
@@ -35,6 +37,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "msw": "3.0.3",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.3.3",
     "vite": "^6.3.6"
