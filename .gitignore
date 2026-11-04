@@ -40,3 +40,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Arquivos de ferramentas locais e planos de execução não entram no repositório.
+.impeccable/
+docs/superpowers/
