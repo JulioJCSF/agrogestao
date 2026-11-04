@@ -11,6 +11,7 @@ import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import com.agrogestao.api.service.lancamento.LancamentoService;
 import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
+import com.agrogestao.api.service.saldo.SaldoPlantioService;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
@@ -51,7 +52,8 @@ class VendaServiceTest {
           plantios,
           producoes,
           lancamentos,
-          new ProtecaoEmissao(emissoes, produtores));
+          new ProtecaoEmissao(emissoes, produtores),
+          new SaldoPlantioService(producoes, itensVenda, plantios));
 
   Cultura milho = new Cultura();
   Map<Long, Plantio> cadastrados = new HashMap<>();

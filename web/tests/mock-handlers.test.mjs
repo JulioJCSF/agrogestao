@@ -653,6 +653,46 @@ describe('400 e 422 por módulo', () => {
   })
 })
 
+describe('saldo do plantio (M05)', () => {
+  test('soma produção e vendas da massa, com sinal, e responde 404', async () => {
+    const inicial = await operador('GET', '/plantios/1/saldo')
+    assert.equal(inicial.status, 200)
+    assert.deepEqual(inicial.corpo, {
+      plantioId: 1,
+      quantidadeProduzida: 120.5,
+      quantidadeVendida: 50,
+      saldo: 70.5,
+      unidadeMedida: 'kg',
+    })
+
+    // RN29: vender acima do produzido é aceito, e o saldo fica negativo.
+    const venda = await operador('POST', '/vendas', {
+      produtorId: 1,
+      clienteId: 1,
+      dataFato: '2026-08-01',
+      itens: [
+        {
+          plantioId: 1,
+          quantidade: 100.001,
+          unidadeMedida: 'kg',
+          valorUnitario: 2,
+        },
+      ],
+    })
+    assert.equal(venda.status, 201)
+    const depois = await operador('GET', '/plantios/1/saldo')
+    assert.equal(depois.corpo.quantidadeVendida, 150.001)
+    assert.equal(depois.corpo.saldo, -29.501)
+
+    erroEsperado(
+      await operador('GET', '/plantios/999/saldo'),
+      404,
+      'NAO_ENCONTRADO',
+      'Plantio não encontrado.',
+    )
+  })
+})
+
 test('reiniciar() descarta o que foi gravado', async () => {
   await operador('POST', '/culturas', {
     nome: 'Cultura Fictícia Temporária',

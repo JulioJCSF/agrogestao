@@ -1,7 +1,7 @@
 package com.agrogestao.api.controller.saldo;
 
 import com.agrogestao.api.dto.*;
-import com.agrogestao.api.exception.ApiNaoImplementadaException;
+import com.agrogestao.api.service.saldo.SaldoPlantioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
@@ -24,22 +24,22 @@ import org.springframework.web.bind.annotation.*;
       description = "Autenticação necessária",
       content = @Content(schema = @Schema(implementation = ErroResposta.class))),
   @ApiResponse(
-      responseCode = "422",
-      description = "Regra de negócio",
-      content = @Content(schema = @Schema(implementation = ErroResposta.class))),
-  @ApiResponse(
-      responseCode = "501",
-      description = "Contrato publicado; implementação em sprint posterior",
+      responseCode = "404",
+      description = "Plantio não encontrado",
       content = @Content(schema = @Schema(implementation = ErroResposta.class)))
 })
 public class SaldoPlantioController {
+  private final SaldoPlantioService service;
 
   @GetMapping("/api/v1/plantios/{id}/saldo")
   @Operation(
       summary = "Saldo informativo",
-      description = "Esqueleto F13: responde 501 até a implementação.")
+      description =
+          "Produção registrada menos quantidade vendida do plantio, acumuladas sem recorte de"
+              + " período, na unidade da cultura. Pode ser negativo e nunca bloqueia venda (RF33,"
+              + " RN29). Plantio encerrado responde normalmente.")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public SaldoPlantioResposta consultar(@PathVariable Long id) {
-    throw new ApiNaoImplementadaException();
+    return service.saldo(id);
   }
 }

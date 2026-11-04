@@ -7,6 +7,8 @@ import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
 import com.agrogestao.api.service.lancamento.LancamentoService;
 import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
+import com.agrogestao.api.service.saldo.SaldoPlantioService;
+import com.agrogestao.api.service.saldo.SaldoPlantioService.Totais;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
@@ -25,7 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Totais calculados aqui: item com {@code HALF_UP} em 2 casas e venda pela soma dos itens já
  * arredondados (RN30). O saldo nunca bloqueia (RN29): quando o vendido acumulado de um plantio
- * passa do produzido, a resposta leva um aviso, recalculado também nas consultas.
+ * passa do produzido, a resposta leva um aviso, recalculado também nas consultas. Produzido e
+ * vendido vêm do {@link SaldoPlantioService}, a mesma conta do saldo do plantio (M05).
  */
 @Service
 @RequiredArgsConstructor
@@ -41,6 +44,7 @@ public class VendaService {
   private final ProducaoRepository producoes;
   private final LancamentoService lancamentos;
   private final ProtecaoEmissao protecao;
+  private final SaldoPlantioService saldos;
 
   static final String EXCLUSAO_EMITIDA =
       "Esta venda já consta em relatório emitido e não pode ser excluída. Corrija pela alteração.";
@@ -72,7 +76,7 @@ public class VendaService {
             : itensVenda.buscarDasVendas(pagina.map(Venda::getId).toList()).stream()
                 .collect(Collectors.groupingBy(i -> i.getVenda().getId()));
     Totais totais =
-        totais(
+        saldos.totais(
             itensPorVenda.values().stream()
                 .flatMap(List::stream)
                 .map(i -> i.getPlantio().getId())
@@ -271,23 +275,9 @@ public class VendaService {
     return resposta(
         venda,
         itens,
-        totais(itens.stream().map(i -> i.getPlantio().getId()).collect(Collectors.toSet())));
+        // Vendido acumulado, sem recorte de período; inclui esta venda.
+        saldos.totais(itens.stream().map(i -> i.getPlantio().getId()).collect(Collectors.toSet())));
   }
-
-  /** Produzido e vendido acumulados dos plantios, sem recorte de período; vendido inclui esta. */
-  private Totais totais(Set<Long> plantioIds) {
-    if (plantioIds.isEmpty()) return new Totais(Map.of(), Map.of());
-    return new Totais(
-        porPlantio(producoes.somarQuantidadePorPlantio(plantioIds)),
-        porPlantio(itensVenda.somarQuantidadePorPlantio(plantioIds)));
-  }
-
-  private static Map<Long, BigDecimal> porPlantio(List<TotalPorPlantio> linhas) {
-    return linhas.stream()
-        .collect(Collectors.toMap(TotalPorPlantio::getPlantioId, TotalPorPlantio::getTotal));
-  }
-
-  private record Totais(Map<Long, BigDecimal> produzido, Map<Long, BigDecimal> vendido) {}
 
   private static VendaResposta resposta(Venda v, List<ItemVenda> itens, Totais totais) {
     List<ItemVenda> ordenados =
@@ -320,8 +310,8 @@ public class VendaService {
     List<String> avisos = new ArrayList<>();
     unidadePorPlantio.forEach(
         (plantioId, unidade) -> {
-          BigDecimal produzido = totais.produzido().getOrDefault(plantioId, BigDecimal.ZERO);
-          BigDecimal vendido = totais.vendido().getOrDefault(plantioId, BigDecimal.ZERO);
+          BigDecimal produzido = totais.produzido(plantioId);
+          BigDecimal vendido = totais.vendido(plantioId);
           if (vendido.compareTo(produzido) > 0)
             avisos.add(
                 "A quantidade vendida do plantio ("
