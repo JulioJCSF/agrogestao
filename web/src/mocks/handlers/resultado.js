@@ -9,7 +9,7 @@ import {
 /**
  * Exemplos fixos de apuração, coerentes com a massa do banco.js: o mock não refaz a apuração
  * (RN19–RN24), que pertence à API. Plantio criado em memória responde com valores zerados, e
- * o filtro por mês é aceito mas não muda os números.
+ * o filtro por mês muda somente o período, sem refazer os valores ilustrativos.
  */
 export const APURACAO_FIXA = {
   1: {
@@ -78,9 +78,16 @@ export default [
       const mes = url.searchParams.get('mes')
       if (mes && !/^\d{4}-(0[1-9]|1[0-2])$/.test(mes))
         throw validacao([{ campo: 'mes', mensagem: MENSAGEM_VALOR_INVALIDO }])
-      return resultadoFixo(
-        buscar('plantios', id, mensagensNaoEncontrado.plantios),
-      )
+      const plantio = buscar('plantios', id, mensagensNaoEncontrado.plantios)
+      const resultado = resultadoFixo(plantio)
+      if (plantio.tipoCiclo === 'CURTO') {
+        const competencia = mes || hoje().slice(0, 7)
+        const [ano, mesNumero] = competencia.split('-').map(Number)
+        const ultimoDia = new Date(Date.UTC(ano, mesNumero, 0)).getUTCDate()
+        resultado.periodoInicio = `${competencia}-01`
+        resultado.periodoFim = `${competencia}-${ultimoDia}`
+      }
+      return resultado
     },
   ],
 ]

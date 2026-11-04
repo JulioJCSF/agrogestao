@@ -314,5 +314,14 @@ export async function removerRegistro(collection, id) {
   await api.delete(`${resources[collection]}/${id}`)
 }
 export async function encerrarPlantioRegistro(id, endedAt) {
-  await api.post(`/plantios/${id}/encerramento`, { dataEncerramento: endedAt })
+  const { data } = await api.post(`/plantios/${id}/encerramento`, {
+    dataEncerramento: endedAt,
+  })
+  return fromApi('plantings', data)
+}
+export async function consultarResultadoPlantio(id, mes) {
+  const { data } = await api.get(`/plantios/${id}/resultado`, {
+    params: mes ? { mes } : {},
+  })
+  return data
 }
