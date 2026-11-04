@@ -37,6 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>A03d (decisão 1 de 03/11): a alteração nunca troca o produtor; seria o mesmo que excluir a
  * despesa dos dados do produtor atual.
+ *
+ * <p>A03e: a criação também trava o produtor antes dos plantios, para a despesa nova não entrar no
+ * meio de uma emissão do mesmo produtor (RN31, RN34).
  */
 @Service
 @RequiredArgsConstructor
@@ -45,7 +48,6 @@ public class DespesaService {
   private static final BigDecimal CENTAVO = new BigDecimal("0.01");
 
   private final DespesaRepository repository;
-  private final ProdutorRepository produtores;
   private final CategoriaDespesaRepository categorias;
   private final PlantioRepository plantios;
   private final RateioDespesaRepository rateios;
@@ -228,9 +230,10 @@ public class DespesaService {
   }
 
   /**
-   * Validações 2 a 9 da L04a, nesta ordem; a 1 (formato) é do Bean Validation no DTO. Os plantios
-   * são lidos já travados, no mesmo ponto em que a L04a os procurava: o 404 e as regras seguintes
-   * não mudam, e a RN04 é validada com o encerramento atual, sem corrida com o encerramento.
+   * Validações 2 a 9 da L04a, nesta ordem; a 1 (formato) é do Bean Validation no DTO. O produtor e
+   * os plantios são lidos já travados, no mesmo ponto em que a L04a os procurava: o 404 e as regras
+   * seguintes não mudam, e a RN04 é validada com o encerramento atual, sem corrida com o
+   * encerramento. Na alteração, o produtor já está travado e o lock repetido não espera.
    *
    * @param atuais plantios atuais da despesa na alteração, travados junto com os novos
    */
@@ -242,10 +245,8 @@ public class DespesaService {
       throw new RegraNegocioException("A despesa precisa estar vinculada a pelo menos um plantio.");
     if (new HashSet<>(ids).size() != ids.size())
       throw new RegraNegocioException("O mesmo plantio foi informado mais de uma vez.");
-    Produtor produtor =
-        produtores
-            .findById(dto.produtorId())
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Produtor não encontrado."));
+    // A03e: produtor antes dos plantios, como em toda escrita de lançamento.
+    Produtor produtor = protecao.travarProdutor(dto.produtorId());
     CategoriaDespesa categoria =
         categorias
             .findById(dto.categoriaDespesaId())

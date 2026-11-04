@@ -1,8 +1,14 @@
 import { useState } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
-import { byId, rotuloPlantio, useData } from '../contexts/DataContext.jsx'
+import {
+  byId,
+  dateText,
+  rotuloPlantio,
+  useData,
+} from '../contexts/DataContext.jsx'
 import { Field } from './CampoFormulario.jsx'
+import { Confirmacao } from './Feedback.jsx'
 import { formatCpf, localToday } from './formularioValores.js'
 import { campoDoFormulario } from '../services/registroService.js'
 
@@ -133,6 +139,7 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [saving, setSaving] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const set = (key, value) =>
     setForm((current) => ({ ...current, [key]: value }))
   const producerOptions = data.producers
@@ -157,6 +164,10 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
     event.preventDefault()
     setError('')
     setFieldErrors({})
+    if (type === 'closePlanting') {
+      setConfirming(true)
+      return
+    }
     setSaving(true)
     try {
       if (type === 'record') {
@@ -168,12 +179,6 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
         }
         onClose()
         openModal(map[form.kind] || 'producer')
-        return
-      }
-      if (type === 'closePlanting') {
-        await encerrarPlantio(item.id, form.endedAt)
-        onClose()
-        notify('Plantio encerrado com sucesso.')
         return
       }
       const fields = {
@@ -252,6 +257,30 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
     }
   }
 
+  async function confirmClose() {
+    if (saving) return
+    setSaving(true)
+    setError('')
+    try {
+      await encerrarPlantio(item.id, form.endedAt)
+      onClose()
+      notify('Plantio encerrado com sucesso.')
+    } catch (cause) {
+      setError(cause.message)
+      setFieldErrors(
+        Object.fromEntries(
+          (cause.campos || []).map(({ campo, mensagem }) => [
+            campoDoFormulario(type, campo),
+            mensagem,
+          ]),
+        ),
+      )
+      if (cause.campos?.length) setConfirming(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const option = (list, label = 'name') =>
     list.map((row) => ({ value: row.id, label: row[label] }))
   const field = (name, label, props = {}) => (
@@ -275,6 +304,20 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
       <span>{label}</span>
     </label>
   )
+
+  if (confirming)
+    return (
+      <Confirmacao
+        title="Encerrar plantio?"
+        description={`Encerrar ${rotuloPlantio(data, item)} em ${dateText(form.endedAt)}? Lançamentos com data do fato posterior a essa data serão recusados.`}
+        action="Encerrar plantio"
+        busy={saving}
+        error={error}
+        onConfirm={confirmClose}
+        onCancel={() => setConfirming(false)}
+        data-testid="close-planting-confirmation"
+      />
+    )
 
   return (
     <div
@@ -648,11 +691,7 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
                         label="Plantio"
                         value={row.plantingId}
                         onChange={(value) => change('plantingId', value)}
-                        options={plantingOptions.filter(
-                          (optionRow) =>
-                            byId(data.plantings, optionRow.value)?.status ===
-                            'Em andamento',
-                        )}
+                        options={plantingOptions}
                         required
                       />
                       {available != null && (
@@ -781,8 +820,9 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
                   required: true,
                 })}
                 <p className="notice">
-                  Após o encerramento, novas produções não poderão ser
-                  registradas neste plantio.
+                  Após o encerramento, produção, despesa, diária e item de venda
+                  poderão ter data do fato até a data de encerramento,
+                  inclusive.
                 </p>
               </>
             )}
@@ -804,11 +844,13 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
             >
               {saving
                 ? 'Salvando...'
-                : type === 'report'
-                  ? 'Emitir relatório'
-                  : item
-                    ? 'Salvar alterações'
-                    : 'Salvar registro'}
+                : type === 'closePlanting'
+                  ? 'Continuar'
+                  : type === 'report'
+                    ? 'Emitir relatório'
+                    : item
+                      ? 'Salvar alterações'
+                      : 'Salvar registro'}
             </button>
           </div>
         </form>

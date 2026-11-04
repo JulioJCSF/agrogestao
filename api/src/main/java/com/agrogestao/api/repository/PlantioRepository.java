@@ -17,6 +17,13 @@ public interface PlantioRepository
   Optional<Plantio> buscarParaAtualizar(@Param("id") Long id);
 
   /**
+   * Só o produtor do plantio, sem carregar a entidade: o produtor é travado antes do plantio
+   * (A03e). O plantio nunca troca de produtor, então o id lido aqui continua valendo.
+   */
+  @Query("select p.propriedade.produtor.id from Plantio p where p.id = :id")
+  Optional<Long> buscarProdutorId(@Param("id") Long id);
+
+  /**
    * Todos os plantios do produtor, em ordem de id, com cultura e propriedade na mesma consulta. O
    * recorte pelo período do relatório é da emissão (A03a).
    */
