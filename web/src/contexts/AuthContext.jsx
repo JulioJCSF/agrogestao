@@ -25,9 +25,11 @@ function readSession() {
       sessionStorage.removeItem(KEY)
       return null
     }
-    const ultimaAtividade = Number.isFinite(session.ultimaAtividade)
-      ? session.ultimaAtividade
-      : Date.now()
+    if (!Number.isFinite(session.ultimaAtividade)) {
+      session.ultimaAtividade = Date.now()
+      sessionStorage.setItem(KEY, JSON.stringify(session))
+    }
+    const { ultimaAtividade } = session
     if (Date.now() - ultimaAtividade >= INATIVIDADE_MS) {
       encerrarPorInatividade()
       return null
@@ -108,7 +110,11 @@ export function AuthProvider({ children }) {
         encerrarPorInatividade()
         return
       }
-      ultimaAtividade = Date.now()
+      const agora = Date.now()
+      // pointermove dispara dezenas de vezes por segundo: grava e reagenda no máximo a cada 15 s.
+      const gravar = agora - ultimaAtividade >= 15000
+      ultimaAtividade = agora
+      if (!gravar) return
       sessionStorage.setItem(
         KEY,
         JSON.stringify({ ...session, ultimaAtividade }),

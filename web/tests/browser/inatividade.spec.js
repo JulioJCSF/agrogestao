@@ -134,3 +134,44 @@ test('devePreservarInteracaoQuandoRespostaDeRestauracaoChegarDepois', async ({
   await page.clock.fastForward(MINUTO)
   await expect(page).toHaveURL(/\/login$/)
 })
+
+test('deveManterSessaoQuandoMouseMoverACadaCincoSegundos', async ({ page }) => {
+  const tela = await entrar(page)
+  for (let i = 0; i < (40 * MINUTO) / 5000; i++) {
+    await page.clock.fastForward(5000)
+    await page.mouse.move(10 + (i % 2), 10)
+  }
+  await expect(tela.campo('profile-menu')).toBeVisible()
+  await page.clock.fastForward(30 * MINUTO)
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(tela.campo('session-message')).toHaveText(mensagem)
+})
+
+test('deveGravarUltimaAtividadeQuandoSessaoSalvaNaoTiver', async ({
+  page,
+  context,
+}) => {
+  await entrar(page)
+  await page.evaluate(() => {
+    const sessao = JSON.parse(sessionStorage.getItem('agrogestao-session'))
+    delete sessao.ultimaAtividade
+    sessionStorage.setItem('agrogestao-session', JSON.stringify(sessao))
+  })
+  // Sem resposta do /auth/me, só a leitura da sessão pode gravar a última atividade.
+  await page.route('**/api/v1/auth/me', () => {})
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  const salva = await page.evaluate(() => ({
+    sessao: sessionStorage.getItem('agrogestao-session'),
+    agora: Date.now(),
+  }))
+  // Reabre a aba a partir do que ficou gravado, sem a página anterior encerrar a sessão ao sair.
+  const reaberta = await context.newPage()
+  await reaberta.clock.install({ time: salva.agora + 31 * MINUTO })
+  await reaberta.addInitScript((sessao) => {
+    sessionStorage.setItem('agrogestao-session', sessao)
+  }, salva.sessao)
+  await reaberta.goto('/')
+  const tela = new LoginPage(reaberta)
+  await expect(reaberta).toHaveURL(/\/login$/)
+  await expect(tela.campo('session-message')).toHaveText(mensagem)
+})
