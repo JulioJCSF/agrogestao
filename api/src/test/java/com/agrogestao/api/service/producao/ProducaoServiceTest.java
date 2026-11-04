@@ -38,6 +38,7 @@ class ProducaoServiceTest {
     plantio.setCultura(cultura);
     when(plantios.findById(7L)).thenReturn(Optional.of(plantio));
     when(plantios.buscarParaAtualizar(7L)).thenReturn(Optional.of(plantio));
+    when(plantios.buscarProdutorId(7L)).thenReturn(Optional.of(3L));
     when(culturas.buscarParaAtualizar(2L)).thenReturn(Optional.of(cultura));
     when(repository.buscarProdutorId(1L)).thenReturn(Optional.of(3L));
     when(produtores.buscarParaAtualizar(3L)).thenReturn(Optional.of(new Produtor()));
@@ -178,6 +179,27 @@ class ProducaoServiceTest {
     exclusao.verify(repository).buscarProdutorId(1L);
     exclusao.verify(produtores).buscarParaAtualizar(3L);
     exclusao.verify(repository).findById(1L);
+    verify(plantios, never()).buscarParaAtualizar(any());
+  }
+
+  // A03e: a produção nova trava o produtor do plantio antes do plantio e da cultura.
+
+  @Test
+  void deveTravarProdutorDoPlantioAntesDoPlantioEDaCulturaQuandoRegistrar() {
+    service.criar(7L, dto("12.500", "kg", "2024-03-10"));
+    var ordem = inOrder(plantios, produtores, culturas);
+    ordem.verify(plantios).buscarProdutorId(7L);
+    ordem.verify(produtores).buscarParaAtualizar(3L);
+    ordem.verify(plantios).buscarParaAtualizar(7L);
+    ordem.verify(culturas).buscarParaAtualizar(2L);
+  }
+
+  @Test
+  void deveResponder404DoPlantioSemTravarQuandoRegistrarEmPlantioInexistente() {
+    assertThatThrownBy(() -> service.criar(99L, dto("12.500", "kg", "2024-03-10")))
+        .isInstanceOf(RecursoNaoEncontradoException.class)
+        .hasMessage("Plantio não encontrado.");
+    verifyNoInteractions(produtores, culturas);
     verify(plantios, never()).buscarParaAtualizar(any());
   }
 }

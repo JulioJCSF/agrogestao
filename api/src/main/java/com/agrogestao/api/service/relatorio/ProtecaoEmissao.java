@@ -16,6 +16,10 @@ import org.springframework.stereotype.Component;
  * também trava o produtor antes de montar o conteúdo; assim, uma exclusão conferida aqui e uma
  * emissão do mesmo produtor nunca se cruzam: ou a exclusão termina antes e a emissão não vê o
  * lançamento, ou a emissão termina antes e a exclusão encontra o período emitido.
+ *
+ * <p>A03e: a criação de lançamento e a alteração e o encerramento de plantio também travam o
+ * produtor primeiro (produtor → diária → plantio → cultura). Assim nada do produtor muda enquanto a
+ * emissão lê, e o conteúdo emitido é coerente consigo mesmo.
  */
 @Component
 @RequiredArgsConstructor

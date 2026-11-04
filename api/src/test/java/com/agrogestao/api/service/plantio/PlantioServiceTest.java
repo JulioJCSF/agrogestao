@@ -7,6 +7,7 @@ import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
+import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.Optional;
@@ -25,6 +26,8 @@ class PlantioServiceTest {
   DiariaRepository diarias = mock(DiariaRepository.class);
   VendaRepository vendas = mock(VendaRepository.class);
   ItemVendaRepository itensVenda = mock(ItemVendaRepository.class);
+  EmissaoRelatorioRepository emissoes = mock(EmissaoRelatorioRepository.class);
+  ProdutorRepository produtores = mock(ProdutorRepository.class);
   Clock clock = Clock.fixed(Instant.parse("2026-10-12T01:30:00Z"), ZoneId.of("America/Fortaleza"));
   PlantioService service = servico(clock);
   Cultura cultura = new Cultura();
@@ -40,6 +43,9 @@ class PlantioServiceTest {
     ReflectionTestUtils.setField(propriedade, "id", 1L);
     ReflectionTestUtils.setField(cultura, "id", 2L);
     propriedade.setProdutor(produtor);
+    // A03e: o produtor do plantio é lido por projeção e travado antes do plantio.
+    when(repo.buscarProdutorId(anyLong())).thenReturn(Optional.of(3L));
+    when(produtores.buscarParaAtualizar(3L)).thenReturn(Optional.of(produtor));
     cultura.setTipoCicloPadrao(TipoCiclo.CURTO);
     when(propriedades.findById(1L)).thenReturn(Optional.of(propriedade));
     when(culturas.findById(2L)).thenReturn(Optional.of(cultura));
@@ -48,7 +54,16 @@ class PlantioServiceTest {
 
   PlantioService servico(Clock relogio) {
     return new PlantioService(
-        repo, propriedades, culturas, producoes, despesas, diarias, vendas, itensVenda, relogio);
+        repo,
+        propriedades,
+        culturas,
+        producoes,
+        despesas,
+        diarias,
+        vendas,
+        itensVenda,
+        relogio,
+        new ProtecaoEmissao(emissoes, produtores));
   }
 
   PlantioRequisicao entrada(String area, LocalDate inicio, TipoCiclo ciclo) {
@@ -358,5 +373,42 @@ class PlantioServiceTest {
         meioDia,
         encerramento(2026, 6, 30),
         "Há lançamento em 01/07/2026, posterior à data de encerramento informada.");
+  }
+
+  // A03e: alterar e encerrar travam o produtor, lido por projeção, antes do plantio e da cultura.
+
+  @Test
+  void deveTravarProdutorAntesDoPlantioEDaCulturaQuandoAlterarOuEncerrar() {
+    Plantio plantio = new Plantio();
+    plantio.setPropriedade(propriedade);
+    plantio.setCultura(cultura);
+    plantio.setDataInicio(LocalDate.of(2026, 2, 1));
+    when(repo.buscarParaAtualizar(4L)).thenReturn(Optional.of(plantio));
+    service.alterar(4L, entrada("3.125", LocalDate.of(2026, 2, 1), null));
+    var ordem = inOrder(repo, produtores, culturas);
+    ordem.verify(repo).buscarProdutorId(4L);
+    ordem.verify(produtores).buscarParaAtualizar(3L);
+    ordem.verify(repo).buscarParaAtualizar(4L);
+    ordem.verify(culturas).buscarParaAtualizar(2L);
+
+    clearInvocations(repo, produtores);
+    service.encerrar(4L, encerramento(2026, 6, 30));
+    var encerramento = inOrder(repo, produtores);
+    encerramento.verify(repo).buscarProdutorId(4L);
+    encerramento.verify(produtores).buscarParaAtualizar(3L);
+    encerramento.verify(repo).buscarParaAtualizar(4L);
+  }
+
+  @Test
+  void deveResponder404DoPlantioSemTravarProdutorQuandoAlterarOuEncerrarInexistente() {
+    when(repo.buscarProdutorId(99L)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.alterar(99L, entrada("1", LocalDate.of(2026, 2, 1), null)))
+        .isInstanceOf(RecursoNaoEncontradoException.class)
+        .hasMessage("Plantio não encontrado.");
+    assertThatThrownBy(() -> service.encerrar(99L, encerramento(2026, 6, 30)))
+        .isInstanceOf(RecursoNaoEncontradoException.class)
+        .hasMessage("Plantio não encontrado.");
+    verifyNoInteractions(produtores);
+    verify(repo, never()).buscarParaAtualizar(99L);
   }
 }

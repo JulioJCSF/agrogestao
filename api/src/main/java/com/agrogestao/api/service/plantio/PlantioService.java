@@ -4,6 +4,7 @@ import com.agrogestao.api.dto.*;
 import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
+import com.agrogestao.api.service.relatorio.ProtecaoEmissao;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -13,6 +14,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Cadastro, consulta, alteração e encerramento de plantio.
+ *
+ * <p>A03e: alterar e encerrar travam o produtor antes do plantio e da cultura, na ordem de locks
+ * dos lançamentos ({@link ProtecaoEmissao}).
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -28,6 +35,7 @@ public class PlantioService {
   private final VendaRepository vendas;
   private final ItemVendaRepository itensVenda;
   private final Clock relogio;
+  private final ProtecaoEmissao protecao;
 
   public PaginaResposta<PlantioResposta> listar(
       Long produtorId,
@@ -127,7 +135,15 @@ public class PlantioService {
         .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado."));
   }
 
+  /**
+   * Trava o produtor do plantio, lido por projeção, e só então o plantio, que já vem com o que
+   * outra transação gravou. Plantio inexistente → 404 do plantio, nunca do produtor.
+   */
   private Plantio encontrarParaAtualizar(Long id) {
+    protecao.travarProdutor(
+        repository
+            .buscarProdutorId(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado.")));
     return repository
         .buscarParaAtualizar(id)
         .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado."));
