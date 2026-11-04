@@ -72,8 +72,13 @@ export function DataProvider({ children }) {
   }
 
   async function encerrarPlantio(id, endedAt) {
-    await encerrarPlantioRegistro(id, endedAt)
-    setData(await listarTodos(session?.user?.perfil))
+    const plantio = await encerrarPlantioRegistro(id, endedAt)
+    setData((current) => ({
+      ...current,
+      plantings: current.plantings.map((row) =>
+        row.id === id ? plantio : row,
+      ),
+    }))
   }
 
   return (

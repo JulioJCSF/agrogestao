@@ -7,9 +7,6 @@ import {
   money,
   number,
   rotuloPlantio,
-  resultadoPlantio,
-  quantidadeProduzida,
-  quantidadeVendida,
   useData,
 } from '../../contexts/DataContext.jsx'
 import { usePerfil } from '../../contexts/AuthContext.jsx'
@@ -25,6 +22,8 @@ import {
   Status,
   Tabs,
 } from '../../components/ui.jsx'
+import { Aviso, Carregando } from '../../components/Feedback.jsx'
+import { ResultadoPlantio } from './ResultadoPlantio.jsx'
 
 export function Producao() {
   const { data } = useData()
@@ -248,12 +247,53 @@ export function Producao() {
 
 export function DetalhePlantio() {
   const { id } = useParams()
-  const { data } = useData()
+  const { data, loading, error } = useData()
   const { openModal } = useOutletContext()
   const { canWrite } = usePerfil()
   const plant = byId(data.plantings, id)
-  if (!plant) return <NotFound />
-  const result = resultadoPlantio(data, id)
+  const back = <BackLink to="/producao" label="Voltar para produção" />
+  if (error)
+    return (
+      <>
+        {back}
+        <Aviso tipo="erro" data-testid="planting-error">
+          {error}
+        </Aviso>
+        <button
+          type="button"
+          className="secondary-button"
+          data-testid="planting-retry"
+          onClick={() => window.location.reload()}
+        >
+          Tentar novamente
+        </button>
+      </>
+    )
+  if (loading || !data.indisponiveis)
+    return (
+      <>
+        {back}
+        <Carregando data-testid="planting-loading">
+          Carregando plantio...
+        </Carregando>
+      </>
+    )
+  if (data.indisponiveis.includes('plantings'))
+    return (
+      <>
+        {back}
+        <Aviso tipo="erro" data-testid="planting-error">
+          A consulta de plantios está indisponível. Tente novamente mais tarde.
+        </Aviso>
+      </>
+    )
+  if (!plant)
+    return (
+      <>
+        {back}
+        <NotFound />
+      </>
+    )
   const productions = data.production.filter((row) => row.plantingId === id)
   const expenses = data.expenses.filter((row) =>
     row.allocations?.some((entry) => entry.plantingId === id),
@@ -266,9 +306,8 @@ export function DetalhePlantio() {
   )
   return (
     <>
-      <BackLink to="/producao" label="Voltar para produção" />
+      {back}
       <PageHeading
-        eyebrow={plant.status}
         title={byId(data.cultures, plant.cultureId)?.name || 'Plantio'}
         description={`${byId(data.properties, plant.propertyId)?.name} · ${byId(data.producers, plant.producerId)?.name} · ${number(plant.area, 3)} ha`}
         action={
@@ -296,47 +335,30 @@ export function DetalhePlantio() {
           )
         }
       />
-      <div className="mini-metrics">
-        <div>
-          <span>Quantidade produzida</span>
-          <strong>
-            {number(quantidadeProduzida(data, id), 3)}{' '}
-            {byId(data.cultures, plant.cultureId)?.unit}
-          </strong>
-        </div>
-        <div>
-          <span>Quantidade vendida</span>
-          <strong>
-            {number(quantidadeVendida(data, id), 3)}{' '}
-            {byId(data.cultures, plant.cultureId)?.unit}
-          </strong>
-        </div>
-        <div>
-          <span>Receita</span>
-          <strong>{money(result.revenue)}</strong>
-        </div>
-        <div>
-          <span>Custo de desembolso</span>
-          <strong>{money(result.cost)}</strong>
-        </div>
-        <div>
-          <span>Resultado</span>
-          <strong className={result.result < 0 ? 'negative' : ''}>
-            {money(result.result)}
-          </strong>
-        </div>
-      </div>
-      <p className="result-note">
-        Mão de obra familiar: {money(result.familyLabor)} (valor complementar,
-        separado do custo de desembolso).
+      <p data-testid="planting-status">
+        <Status tone={plant.endedAt ? 'gray' : 'green'}>{plant.status}</Status>
       </p>
+      <p className="result-note" data-testid="planting-dates">
+        Início: {dateText(plant.startedAt)} · Previsão de colheita:{' '}
+        {dateText(plant.expectedAt)}
+        {plant.endedAt && <> · Encerramento: {dateText(plant.endedAt)}</>} ·
+        Ciclo {plant.cycle.toLowerCase()}
+      </p>
+      {plant.endedAt && (
+        <Aviso>
+          São permitidos lançamentos com data do fato até{' '}
+          {dateText(plant.endedAt)}, inclusive.
+        </Aviso>
+      )}
+      <ResultadoPlantio key={id} plantio={plant} />
       <div className="detail-grid">
-        <section className="panel">
+        <section className="panel" data-testid="planting-production">
           <SectionHeader
             title="Produção"
             subtitle="Colheitas deste plantio"
             action={
-              canWrite && (
+              canWrite &&
+              !data.indisponiveis.includes('production') && (
                 <button
                   type="button"
                   className="text-button"
@@ -350,7 +372,9 @@ export function DetalhePlantio() {
               )
             }
           />
-          {productions.length ? (
+          {data.indisponiveis.includes('production') ? (
+            <Aviso tipo="erro">A consulta de produção está indisponível.</Aviso>
+          ) : productions.length ? (
             <div className="stack-list">
               {productions.map((row) => (
                 <div className="stack-row" key={row.id}>
@@ -370,12 +394,13 @@ export function DetalhePlantio() {
             <Empty />
           )}
         </section>
-        <section className="panel">
+        <section className="panel" data-testid="planting-expenses">
           <SectionHeader
             title="Despesas"
             subtitle="Valores rateados a este plantio"
             action={
-              canWrite && (
+              canWrite &&
+              !data.indisponiveis.includes('expenses') && (
                 <button
                   type="button"
                   className="text-button"
@@ -392,7 +417,9 @@ export function DetalhePlantio() {
               )
             }
           />
-          {expenses.length ? (
+          {data.indisponiveis.includes('expenses') ? (
+            <Aviso tipo="erro">A consulta de despesas está indisponível.</Aviso>
+          ) : expenses.length ? (
             <div className="stack-list">
               {expenses.map((row) => (
                 <div className="stack-row" key={row.id}>
@@ -400,13 +427,22 @@ export function DetalhePlantio() {
                     <Wallet size={18} />
                   </span>
                   <span>
-                    <strong>{row.description}</strong>
+                    <strong>
+                      {row.description}
+                      {row.estornada && (
+                        <>
+                          {' '}
+                          · <Status tone="gray">Estornada</Status>
+                        </>
+                      )}
+                    </strong>
                     <small>
                       {dateText(row.date)} ·{' '}
-                      {
+                      {number(
                         row.allocations.find((entry) => entry.plantingId === id)
-                          ?.percent
-                      }
+                          ?.percent,
+                        2,
+                      )}
                       % do total
                     </small>
                   </span>
@@ -423,12 +459,13 @@ export function DetalhePlantio() {
             <Empty />
           )}
         </section>
-        <section className="panel">
+        <section className="panel" data-testid="planting-dailies">
           <SectionHeader
             title="Diárias"
             subtitle="Trabalho pago e familiar"
             action={
-              canWrite && (
+              canWrite &&
+              !data.indisponiveis.includes('dailies') && (
                 <button
                   type="button"
                   className="text-button"
@@ -440,7 +477,9 @@ export function DetalhePlantio() {
               )
             }
           />
-          {dailies.length ? (
+          {data.indisponiveis.includes('dailies') ? (
+            <Aviso tipo="erro">A consulta de diárias está indisponível.</Aviso>
+          ) : dailies.length ? (
             <div className="stack-list">
               {dailies.map((row) => (
                 <div className="stack-row" key={row.id}>
@@ -463,12 +502,13 @@ export function DetalhePlantio() {
             <Empty />
           )}
         </section>
-        <section className="panel">
+        <section className="panel" data-testid="planting-sales">
           <SectionHeader
-            title="Vendas"
+            title="Itens de venda"
             subtitle="Itens originados neste plantio"
             action={
-              canWrite && (
+              canWrite &&
+              !data.indisponiveis.includes('sales') && (
                 <button
                   type="button"
                   className="text-button"
@@ -493,7 +533,9 @@ export function DetalhePlantio() {
               )
             }
           />
-          {saleItems.length ? (
+          {data.indisponiveis.includes('sales') ? (
+            <Aviso tipo="erro">A consulta de vendas está indisponível.</Aviso>
+          ) : saleItems.length ? (
             <div className="stack-list">
               {saleItems.map((row, index) => (
                 <div className="stack-row" key={`${row.sale.id}-${index}`}>
@@ -509,7 +551,7 @@ export function DetalhePlantio() {
                       {byId(data.clients, row.sale.clientId)?.name}
                     </small>
                   </span>
-                  <b>{money(row.amount * row.unitPrice)}</b>
+                  <b>{money(row.total)}</b>
                 </div>
               ))}
             </div>
