@@ -11,6 +11,7 @@ import com.agrogestao.api.model.Perfil;
 import com.agrogestao.api.repository.*;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -28,14 +29,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * A03b: exclusão de despesa × emissão do mesmo produtor, em paralelo. Sem o lock do produtor, as
- * duas transações se encontram no pior ponto: a exclusão já conferiu que o período não foi emitido
- * e a emissão já leu a despesa. O teste segura cada uma nesse ponto por até 2 s, esperando a outra;
- * com o lock, a segunda nem chega lá antes de a primeira terminar.
+ * A03b e A03d: exclusão de despesa ou de produção × emissão do mesmo produtor, em paralelo. Sem o
+ * lock do produtor, as duas transações se encontram no pior ponto: a exclusão já conferiu que o
+ * período não foi emitido e a emissão já leu a despesa. O teste segura cada uma nesse ponto por até
+ * 2 s, esperando a outra; com o lock, a segunda nem chega lá antes de a primeira terminar. Na
+ * produção, a emissão a lê na apuração, antes das despesas: o ponto crítico da emissão é o mesmo.
  *
- * <p>Aceitável: (a) a exclusão ganhou e a emissão não contém a despesa, ou (b) a emissão ganhou e a
- * exclusão tomou 422. Nunca a emissão com a despesa e a despesa excluída. Um produtor novo por
- * rodada, para nenhuma emissão anterior proteger a despesa da rodada seguinte.
+ * <p>Aceitável: (a) a exclusão ganhou e a emissão não contém o lançamento, ou (b) a emissão ganhou
+ * e a exclusão tomou 422. Nunca a emissão com o lançamento e o lançamento excluído. Um produtor
+ * novo por rodada, para nenhuma emissão anterior proteger a despesa da rodada seguinte.
  */
 class EmissaoProtecaoConcorrenciaIT extends IntegracaoTest {
   static final int RODADAS = 3;
@@ -97,6 +99,9 @@ class EmissaoProtecaoConcorrenciaIT extends IntegracaoTest {
       jdbc.update("delete from emissao_relatorio where produtor_id = ?", id);
       jdbc.update("delete from despesa where produtor_id = ?", id);
       jdbc.update(
+          "delete from producao where plantio_id in (select p.id from plantio p join propriedade r on r.id = p.propriedade_id where r.produtor_id = ?)",
+          id);
+      jdbc.update(
           "delete from plantio where propriedade_id in (select id from propriedade where produtor_id = ?)",
           id);
       jdbc.update("delete from propriedade where produtor_id = ?", id);
@@ -127,14 +132,14 @@ class EmissaoProtecaoConcorrenciaIT extends IntegracaoTest {
         .getResponse();
   }
 
-  /** Produtor com consentimento, plantio aberto e uma despesa de 2026-03-10; devolve a despesa. */
-  long massa(int rodada) throws Exception {
+  /** Produtor com consentimento e um plantio aberto desde 2026-02-01; devolve o plantio. */
+  long plantio(String nome, String cpf) {
     Long produtor =
         jdbc.queryForObject(
             "insert into produtor(nome,documento,consentimento_em,criado_por) values (?,?,'2026-01-15',?) returning id",
             Long.class,
-            "Produtor Teste Concorrência " + rodada,
-            "9990000170" + rodada,
+            nome,
+            cpf,
             autor);
     produtores.add(produtor);
     Long propriedade =
@@ -143,13 +148,18 @@ class EmissaoProtecaoConcorrenciaIT extends IntegracaoTest {
             Long.class,
             produtor,
             autor);
-    Long plantio =
-        jdbc.queryForObject(
-            "insert into plantio(propriedade_id,cultura_id,area,tipo_ciclo,data_inicio,criado_por) values (?,?,1.000,'LONGO','2026-02-01',?) returning id",
-            Long.class,
-            propriedade,
-            milho,
-            autor);
+    return jdbc.queryForObject(
+        "insert into plantio(propriedade_id,cultura_id,area,tipo_ciclo,data_inicio,criado_por) values (?,?,1.000,'LONGO','2026-02-01',?) returning id",
+        Long.class,
+        propriedade,
+        milho,
+        autor);
+  }
+
+  /** Despesa de 2026-03-10 num produtor novo; devolve a despesa. */
+  long massa(int rodada) throws Exception {
+    long plantio = plantio("Produtor Teste Concorrência " + rodada, "9990000170" + rodada);
+    Long produtor = produtores.getLast();
     MockHttpServletResponse criada =
         executar(
             post("/api/v1/despesas"),
@@ -159,6 +169,37 @@ class EmissaoProtecaoConcorrenciaIT extends IntegracaoTest {
     return ((Number) JsonPath.read(criada.getContentAsString(), "$.id")).longValue();
   }
 
+  /** DELETE do caminho × emissão de 01/01 a 30/06 do produtor; devolve [exclusão, emissão]. */
+  MockHttpServletResponse[] correr(String caminho, Long produtor) throws Exception {
+    pontoCritico.set(new CyclicBarrier(2));
+    CountDownLatch largada = new CountDownLatch(1);
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      Future<MockHttpServletResponse> excluir =
+          executor.submit(
+              () -> {
+                largada.await();
+                return mvc.perform(delete(caminho).header(HttpHeaders.AUTHORIZATION, lancamento))
+                    .andReturn()
+                    .getResponse();
+              });
+      Future<MockHttpServletResponse> emitir =
+          executor.submit(
+              () -> {
+                largada.await();
+                return executar(
+                    post("/api/v1/relatorios"),
+                    "{\"produtorId\":%d,\"periodoInicio\":\"2026-01-01\",\"periodoFim\":\"2026-06-30\"}"
+                        .formatted(produtor));
+              });
+      largada.countDown();
+      return new MockHttpServletResponse[] {
+        excluir.get(30, TimeUnit.SECONDS), emitir.get(30, TimeUnit.SECONDS)
+      };
+    } finally {
+      pontoCritico.set(null);
+    }
+  }
+
   @Test
   @Tag("P1")
   void deveNuncaEmitirDespesaExcluidaQuandoExclusaoEEmissaoCorreremEmParalelo() throws Exception {
@@ -166,34 +207,8 @@ class EmissaoProtecaoConcorrenciaIT extends IntegracaoTest {
     for (int rodada = 0; rodada < RODADAS; rodada++) {
       long despesa = massa(rodada);
       Long produtor = produtores.get(rodada);
-      pontoCritico.set(new CyclicBarrier(2));
-      CountDownLatch largada = new CountDownLatch(1);
-      MockHttpServletResponse exclusao, emissao;
-      try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-        Future<MockHttpServletResponse> excluir =
-            executor.submit(
-                () -> {
-                  largada.await();
-                  return mvc.perform(
-                          delete("/api/v1/despesas/" + despesa)
-                              .header(HttpHeaders.AUTHORIZATION, lancamento))
-                      .andReturn()
-                      .getResponse();
-                });
-        Future<MockHttpServletResponse> emitir =
-            executor.submit(
-                () -> {
-                  largada.await();
-                  return executar(
-                      post("/api/v1/relatorios"),
-                      "{\"produtorId\":%d,\"periodoInicio\":\"2026-01-01\",\"periodoFim\":\"2026-06-30\"}"
-                          .formatted(produtor));
-                });
-        largada.countDown();
-        exclusao = excluir.get(30, TimeUnit.SECONDS);
-        emissao = emitir.get(30, TimeUnit.SECONDS);
-      }
-      pontoCritico.set(null);
+      MockHttpServletResponse[] respostas = correr("/api/v1/despesas/" + despesa, produtor);
+      MockHttpServletResponse exclusao = respostas[0], emissao = respostas[1];
 
       assertThat(emissao.getStatus()).as("emissão, rodada %d", rodada).isEqualTo(201);
       List<Number> listadas =
@@ -211,6 +226,49 @@ class EmissaoProtecaoConcorrenciaIT extends IntegracaoTest {
       } else {
         assertThat(exclusao.getStatus()).as("(b) rodada %d", rodada).isEqualTo(422);
         assertThat(emitidaComADespesa).as("(b) rodada %d", rodada).isTrue();
+        assertThat(excluida).as("(b) rodada %d", rodada).isFalse();
+        desfechos.merge("b: emissão ganhou", 1, Integer::sum);
+      }
+    }
+    assertThat(desfechos.values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(RODADAS);
+  }
+
+  /** A03d: a produção de 2026-03-10 é a prova de atividade; a emissão a conta na apuração. */
+  @Test
+  @Tag("P1")
+  void deveNuncaEmitirProducaoExcluidaQuandoExclusaoEEmissaoCorreremEmParalelo() throws Exception {
+    Map<String, Integer> desfechos = new TreeMap<>();
+    for (int rodada = 0; rodada < RODADAS; rodada++) {
+      long plantio =
+          plantio("Produtor Teste Concorrência Produção " + rodada, "9990000171" + rodada);
+      Long produtor = produtores.getLast();
+      MockHttpServletResponse criada =
+          executar(
+              post("/api/v1/plantios/" + plantio + "/producoes"),
+              "{\"quantidade\":10.000,\"unidadeMedida\":\"kg\",\"dataFato\":\"2026-03-10\"}");
+      assertThat(criada.getStatus()).isEqualTo(201);
+      long producao = ((Number) JsonPath.read(criada.getContentAsString(), "$.id")).longValue();
+
+      MockHttpServletResponse[] respostas = correr("/api/v1/producoes/" + producao, produtor);
+      MockHttpServletResponse exclusao = respostas[0], emissao = respostas[1];
+
+      assertThat(emissao.getStatus()).as("emissão, rodada %d", rodada).isEqualTo(201);
+      List<Number> produzido =
+          JsonPath.read(emissao.getContentAsString(), "$.conteudo.plantios[*].quantidadeProduzida");
+      boolean emitidaComAProducao =
+          produzido.stream().anyMatch(q -> new BigDecimal(q.toString()).signum() > 0);
+      boolean excluida =
+          jdbc.queryForObject("select count(*) from producao where id = ?", Integer.class, producao)
+              == 0;
+      assertThat(emitidaComAProducao && excluida)
+          .as("rodada %d: emissão com a produção e produção excluída", rodada)
+          .isFalse();
+      if (exclusao.getStatus() == 204) {
+        assertThat(emitidaComAProducao).as("(a) rodada %d", rodada).isFalse();
+        desfechos.merge("a: exclusão ganhou", 1, Integer::sum);
+      } else {
+        assertThat(exclusao.getStatus()).as("(b) rodada %d", rodada).isEqualTo(422);
+        assertThat(emitidaComAProducao).as("(b) rodada %d", rodada).isTrue();
         assertThat(excluida).as("(b) rodada %d", rodada).isFalse();
         desfechos.merge("b: emissão ganhou", 1, Integer::sum);
       }

@@ -1,6 +1,7 @@
 package com.agrogestao.api.service.despesa;
 
 import com.agrogestao.api.dto.*;
+import com.agrogestao.api.dto.ErroResposta.CampoErro;
 import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
@@ -33,6 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
  * despesa, inclusive a gerada por diária, e não cria lançamento de ajuste; a estornada fica
  * congelada. Alterar, excluir e estornar travam o produtor antes de ler a despesa e antes de
  * qualquer plantio ({@link ProtecaoEmissao}).
+ *
+ * <p>A03d (decisão 1 de 03/11): a alteração nunca troca o produtor; seria o mesmo que excluir a
+ * despesa dos dados do produtor atual.
  */
 @Service
 @RequiredArgsConstructor
@@ -56,6 +60,8 @@ public class DespesaService {
       "Esta despesa já consta em relatório emitido e não pode ser excluída. Use o estorno.";
   static final String DATA_EMITIDA =
       "Esta despesa já consta em relatório emitido. A data do fato não pode ser alterada.";
+  static final String OUTRO_PRODUTOR =
+      "A despesa não pode ser transferida para outro produtor. Exclua e lance de novo, ou estorne se já estiver em relatório emitido.";
 
   public DespesaResposta detalhar(Long id) {
     return DespesaResposta.de(encontrar(id));
@@ -137,6 +143,10 @@ public class DespesaService {
   @Transactional
   public DespesaResposta alterar(Long id, DespesaRequisicao dto) {
     Despesa despesa = travar(id);
+    if (!despesa.getProdutor().getId().equals(dto.produtorId()))
+      throw new RegraNegocioException(
+          OUTRO_PRODUTOR,
+          List.of(new CampoErro("produtorId", "Informe o produtor atual da despesa.")));
     exigirNaoEstornada(despesa);
     exigirDespesaManual(despesa);
     // Decisão 1 de 03/11: só a troca da data é recusada; senão bastaria deslocar e excluir.
@@ -185,7 +195,9 @@ public class DespesaService {
 
   /**
    * Trava o produtor da despesa e só então a lê, para a leitura já ver o que outra transação gravou
-   * antes de liberar o lock. Se a despesa mudou de produtor nesse meio-tempo, trava também o novo.
+   * antes de liberar o lock. Como a alteração não troca o produtor (A03d), a releitura é só
+   * defensiva: se a despesa mudou de produtor nesse meio-tempo, o novo é travado ainda antes de
+   * qualquer plantio.
    */
   private Despesa travar(Long id) {
     Long produtorId =

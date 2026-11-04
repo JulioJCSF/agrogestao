@@ -1,6 +1,6 @@
 # AgroGestão — Fase 1: Regras de Negócio
 
-Versão 1.14
+Versão 1.15
 
 Define como o sistema se comporta nos casos concretos. Cada regra aponta para o requisito que a origina; cada caso de teste da Fase 3 apontará de volta para uma regra daqui.
 
@@ -95,6 +95,8 @@ Excluir uma despesa remove todos os seus rateios. Despesa já incluída em relat
 - A venda não tem estorno: em período emitido, corrige-se pela alteração.
 - O estorno vale para qualquer despesa, emitida ou não, inclusive a gerada por diária paga, e não cria lançamento de ajuste.
 - A despesa estornada não aceita mais alteração nem exclusão, e a diária paga que a gerou também não.
+- Produção e diária familiar seguem a regra da venda: em período emitido do produtor do plantio, não podem ser excluídas nem ter a data do fato trocada; quantidade, dias e o resto continuam corrigíveis.
+- Despesa e venda não mudam de produtor na alteração, emitidas ou não: mudar o produtor tiraria o lançamento dos dados do produtor atual, como uma exclusão. Para lançar em outro produtor, exclui-se e lança-se de novo (ou estorna-se a despesa, se já estiver em relatório emitido).
 
 ---
 
@@ -228,6 +230,7 @@ Todo relatório emitido contém: identificação do produtor, período coberto, 
 - Período sem nenhum lançamento também gera relatório, com valores zerados e as duas ressalvas.
 - Entram os plantios do produtor ativos em algum dia do período: início até o fim do período e encerramento ausente ou não anterior ao início do período.
 - Despesa estornada não aparece na lista de despesas do relatório, assim como já não entra no custo (`RN19`).
+- Diária paga cuja despesa foi estornada também não aparece na lista de diárias, porque o custo dela já saiu. A diária familiar não muda.
 
 **Origem:** RF40 a RF44
 
@@ -288,4 +291,4 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 |---|---|---|
 | P15 | Refletir no leiaute do relatório a distinção entre quantidade produzida e vendida (RN25) | Não |
 
-As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Na versão 1.10, a RN11, a RN12 e a RN13 foram completadas com as decisões da L07 (diária), de 2026-10-29. Na versão 1.11, a RN25 foi completada com a decisão da A01, de 2026-11-03 (quantidades no mesmo período do resultado). Na versão 1.12, a RN27, a RN29, a RN30 e a RN38 foram completadas com as decisões da L09b, de 2026-11-03 (plantios do produtor da venda, avisos também na consulta, grafia da unidade, quantidade e valor positivos e proteção da unidade com item de venda). Na versão 1.13, a RN31 foi completada com as decisões da A03a, de 2026-11-03 (plantios ativos no período e despesa estornada fora da lista). Na versão 1.14, a RN11 foi completada com as decisões da A03b, de 2026-11-03 (despesa e venda em período emitido, venda sem estorno, estorno de qualquer despesa e estornada congelada). Nenhuma regra segue pendente.
+As regras RN25 e RN37 foram decididas na versão 1.2. Na versão 1.3, a RN19 (despesa estornada) e a RN24 (safra e mês) foram completadas com as decisões da A01, de 2026-10-26. Na versão 1.4, a RN30 foi completada com as decisões da L09b, de 2026-10-26 (venda sem produção, comparação de unidade e arredondamento do item). Na versão 1.5, a RN13, a RN15 e a RN16 foram completadas com as decisões da L07, de 2026-10-26 (valor informado na familiar, paga sem valor, arredondamento e data da despesa gerada). Na versão 1.6, a RN24 e a RN31 foram completadas com as decisões da A03a, de 2026-10-26 (período do relatório e emissão de período sem lançamentos). Na versão 1.7, a RN09 e a RN10 foram completadas com as decisões da L04a, de 2026-10-27 (convenção de arredondamento do rateio, valor mínimo de um centavo por plantio e recálculo do rateio na alteração). Na versão 1.8, a RN03 foi completada com as decisões da C06b, de 2026-10-27 (encerramento não futuro, plantio já encerrado e encerramento não anterior a lançamento já gravado). Na versão 1.10, a RN11, a RN12 e a RN13 foram completadas com as decisões da L07 (diária), de 2026-10-29. Na versão 1.11, a RN25 foi completada com a decisão da A01, de 2026-11-03 (quantidades no mesmo período do resultado). Na versão 1.12, a RN27, a RN29, a RN30 e a RN38 foram completadas com as decisões da L09b, de 2026-11-03 (plantios do produtor da venda, avisos também na consulta, grafia da unidade, quantidade e valor positivos e proteção da unidade com item de venda). Na versão 1.13, a RN31 foi completada com as decisões da A03a, de 2026-11-03 (plantios ativos no período e despesa estornada fora da lista). Na versão 1.14, a RN11 foi completada com as decisões da A03b, de 2026-11-03 (despesa e venda em período emitido, venda sem estorno, estorno de qualquer despesa e estornada congelada). Na versão 1.15, a RN11 e a RN31 foram completadas com as decisões da A03d, de 2026-11-03 (produção e diária familiar em período emitido, produtor fixo na alteração de despesa e venda, e diária paga estornada fora da lista do relatório). Nenhuma regra segue pendente.

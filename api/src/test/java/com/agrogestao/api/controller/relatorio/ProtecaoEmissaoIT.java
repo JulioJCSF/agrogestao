@@ -12,6 +12,7 @@ import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * com despesa estornada e a venda em período emitido (decisões de 03/11). As emissões saem da API
  * da A03a, e todo caso que mexe em lançamento de período emitido compara {@code conteudo::text}
  * antes e depois (RN34).
+ *
+ * <p>A03d: troca de produtor recusada, diária paga estornada fora da lista do relatório, e produção
+ * e diária familiar com a regra da venda (decisões de 03/11).
  */
 class ProtecaoEmissaoIT extends IntegracaoTest {
   static final String SEMESTRE = "\"periodoInicio\":\"2026-01-01\",\"periodoFim\":\"2026-06-30\"";
@@ -42,6 +46,7 @@ class ProtecaoEmissaoIT extends IntegracaoTest {
   Long autor, produtor, milho, adubo, cliente, p1, p2;
   List<Long> produtores = new ArrayList<>();
   Map<Long, Long> propriedades = new HashMap<>();
+  List<Long> referencias = new ArrayList<>();
 
   @BeforeEach
   void preparar() throws Exception {
@@ -82,6 +87,8 @@ class ProtecaoEmissaoIT extends IntegracaoTest {
       jdbc.update("delete from propriedade where produtor_id = ?", id);
       jdbc.update("delete from produtor where id = ?", id);
     }
+    for (Long referencia : referencias)
+      jdbc.update("delete from valor_referencia_diaria where id = ?", referencia);
     jdbc.update("delete from cliente where id = ?", cliente);
     for (Perfil perfil : new Perfil[] {Perfil.LANCAMENTO, Perfil.CONSULTA})
       jdbc.update("delete from usuario where login = ?", UsuariosTeste.login(perfil));
@@ -194,6 +201,45 @@ class ProtecaoEmissaoIT extends IntegracaoTest {
   int despesasDoProdutor() {
     return jdbc.queryForObject(
         "select count(*) from despesa where produtor_id = ?", Integer.class, produtor);
+  }
+
+  /** Diária familiar precisa de referência vigente; se outro *IT a apagou, cria uma só do dia. */
+  void garantirReferencia(String data) {
+    if (jdbc.queryForObject(
+            "select count(*) from valor_referencia_diaria where vigencia_inicio <= ?::date and (vigencia_fim is null or vigencia_fim >= ?::date)",
+            Integer.class,
+            data,
+            data)
+        == 0)
+      referencias.add(
+          jdbc.queryForObject(
+              "insert into valor_referencia_diaria(valor,vigencia_inicio,vigencia_fim,criado_por) values (80.00,?::date,?::date,?) returning id",
+              Long.class,
+              data,
+              data,
+              autor));
+  }
+
+  String diariaJson(String natureza, String dias, String valor, String data) {
+    return "{\"natureza\":\"%s\",\"quantidadeDias\":%s,\"valorUnitario\":%s,\"dataFato\":\"%s\"}"
+        .formatted(natureza, dias, valor, data);
+  }
+
+  Long diaria(String natureza, String dias, String valor, String data) throws Exception {
+    return id(
+        enviar(post("/api/v1/plantios/" + p1 + "/diarias"), diariaJson(natureza, dias, valor, data))
+            .andExpect(status().isCreated()));
+  }
+
+  String producaoJson(String quantidade, String data) {
+    return "{\"quantidade\":%s,\"unidadeMedida\":\"kg\",\"dataFato\":\"%s\"}"
+        .formatted(quantidade, data);
+  }
+
+  Long producao(String quantidade, String data) throws Exception {
+    return id(
+        enviar(post("/api/v1/plantios/" + p1 + "/producoes"), producaoJson(quantidade, data))
+            .andExpect(status().isCreated()));
   }
 
   ResultActions regra(ResultActions resultado, String mensagem) throws Exception {
@@ -384,6 +430,184 @@ class ProtecaoEmissaoIT extends IntegracaoTest {
     despesa(produtor, "80.00", "2026-03-10", p1);
     emitir(produtor);
     excluir("/api/v1/despesas/" + doOutro).andExpect(status().isNoContent());
+  }
+
+  // --- A03d: troca de produtor ------------------------------------------------------------------
+
+  static final String DESPESA_OUTRO_PRODUTOR =
+      "A despesa não pode ser transferida para outro produtor. Exclua e lance de novo, ou estorne se"
+          + " já estiver em relatório emitido.";
+  static final String VENDA_OUTRO_PRODUTOR =
+      "A venda não pode ser transferida para outro produtor. Exclua e lance de novo.";
+
+  String vendaJson(Long doProdutor, Long plantio, String data) {
+    return "{\"produtorId\":%d,\"clienteId\":%d,\"dataFato\":\"%s\",\"itens\":[{\"plantioId\":%d,\"quantidade\":10.000,\"unidadeMedida\":\"kg\",\"valorUnitario\":5.00}]}"
+        .formatted(doProdutor, cliente, data, plantio);
+  }
+
+  @Test
+  @Tag("P1")
+  void deveRecusarTrocaDeProdutorSemMoverNadaQuandoDespesaOuVendaEstiverEmitida() throws Exception {
+    Long b = produtor("Produtor Teste Transferência", "99900001826");
+    Long pb = plantio(b);
+    Long d1 = despesa(produtor, "80.00", "2026-03-10", p1, p2);
+    Long v1 = venda("10.000", "2026-03-20");
+    long e1 = emitir(produtor);
+    String conteudoE1 = conteudo(e1);
+
+    regra(
+            enviar(put("/api/v1/despesas/" + d1), despesaJson(b, "80.00", "2026-03-10", pb)),
+            DESPESA_OUTRO_PRODUTOR)
+        .andExpect(jsonPath("$.campos[*].campo", contains("produtorId")));
+    regra(enviar(put("/api/v1/vendas/" + v1), vendaJson(b, pb, "2026-03-20")), VENDA_OUTRO_PRODUTOR)
+        .andExpect(jsonPath("$.campos[*].campo", contains("produtorId")));
+
+    assertThat(jdbc.queryForObject("select produtor_id from despesa where id = ?", Long.class, d1))
+        .isEqualTo(produtor);
+    assertThat(
+            jdbc.queryForList(
+                "select plantio_id from rateio_despesa where despesa_id = ? order by plantio_id",
+                Long.class,
+                d1))
+        .containsExactly(p1, p2);
+    assertThat(jdbc.queryForObject("select produtor_id from venda where id = ?", Long.class, v1))
+        .isEqualTo(produtor);
+    assertThat(
+            jdbc.queryForList(
+                "select plantio_id from item_venda where venda_id = ?", Long.class, v1))
+        .containsExactly(p1);
+    assertThat(conteudo(e1)).isEqualTo(conteudoE1);
+  }
+
+  /**
+   * Duas trocas cruzadas (A→B e B→A) em paralelo. Antes da A03d, cada uma travava o próprio
+   * produtor e depois os plantios do outro; agora as duas param no 422 logo depois do primeiro
+   * lock.
+   */
+  @Test
+  void deveRecusarRapidoSemTravarQuandoTrocasDeProdutorSeCruzarem() throws Exception {
+    Long b = produtor("Produtor Teste Transferência", "99900001826");
+    Long pb = plantio(b);
+    Long deA = despesa(produtor, "80.00", "2026-03-10", p1);
+    Long deB = despesa(b, "50.00", "2026-03-10", pb);
+    CountDownLatch largada = new CountDownLatch(1);
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      Future<ResultActions> aParaB =
+          executor.submit(
+              () -> {
+                largada.await();
+                return enviar(
+                    put("/api/v1/despesas/" + deA), despesaJson(b, "80.00", "2026-03-10", pb));
+              });
+      Future<ResultActions> bParaA =
+          executor.submit(
+              () -> {
+                largada.await();
+                return enviar(
+                    put("/api/v1/despesas/" + deB),
+                    despesaJson(produtor, "50.00", "2026-03-10", p1));
+              });
+      largada.countDown();
+      regra(aParaB.get(5, TimeUnit.SECONDS), DESPESA_OUTRO_PRODUTOR);
+      regra(bParaA.get(5, TimeUnit.SECONDS), DESPESA_OUTRO_PRODUTOR);
+    }
+    assertThat(jdbc.queryForObject("select produtor_id from despesa where id = ?", Long.class, deA))
+        .isEqualTo(produtor);
+    assertThat(jdbc.queryForObject("select produtor_id from despesa where id = ?", Long.class, deB))
+        .isEqualTo(b);
+  }
+
+  // --- A03d: diária paga estornada fora do relatório
+  // ----------------------------------------------
+
+  @Test
+  @Tag("P1")
+  void deveTirarDaListaADiariaPagaComDespesaEstornadaQuandoEmitir() throws Exception {
+    garantirReferencia("2026-03-15");
+    Long paga = diaria("PAGA", "2.00", "90.00", "2026-03-12");
+    Long familiar = diaria("FAMILIAR", "1.00", "null", "2026-03-15");
+    Long gerada =
+        jdbc.queryForObject("select id from despesa where diaria_id = ?", Long.class, paga);
+    estornar(gerada).andExpect(status().isCreated());
+
+    String json =
+        enviar(post("/api/v1/relatorios"), "{\"produtorId\":%d,%s}".formatted(produtor, SEMESTRE))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.conteudo.diarias[*].id", contains(familiar.intValue())))
+            .andExpect(jsonPath("$.conteudo.diarias[*].natureza", contains("FAMILIAR")))
+            .andExpect(jsonPath("$.conteudo.despesas", hasSize(0)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertThat(new BigDecimal(JsonPath.read(json, "$.conteudo.custoDesembolso").toString()))
+        .isEqualByComparingTo("0.00");
+    assertThat(new BigDecimal(JsonPath.read(json, "$.conteudo.valorMaoObraFamiliar").toString()))
+        .isPositive();
+  }
+
+  // --- A03d: produção e diária familiar em período emitido
+  // -----------------------------------------
+
+  @Test
+  @Tag("P1")
+  void deveProtegerAProducaoEmitidaEPermitirCorrigirAQuantidadeQuandoPeriodoEstiverEmitido()
+      throws Exception {
+    Long pr = producao("10.000", "2026-03-10");
+    long e1 = emitir(produtor);
+    String conteudoE1 = conteudo(e1);
+
+    regra(
+        excluir("/api/v1/producoes/" + pr),
+        "Esta produção já consta em relatório emitido e não pode ser excluída. Corrija pela"
+            + " alteração.");
+    regra(
+        enviar(put("/api/v1/producoes/" + pr), producaoJson("10.000", "2026-07-02")),
+        "Esta produção já consta em relatório emitido. A data do fato não pode ser alterada.");
+    enviar(put("/api/v1/producoes/" + pr), producaoJson("12.500", "2026-03-10"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.quantidade").value(12.5));
+
+    assertThat(
+            jdbc.queryForObject(
+                "select data_fato::text from producao where id = ?", String.class, pr))
+        .isEqualTo("2026-03-10");
+    assertThat(conteudo(e1)).isEqualTo(conteudoE1);
+
+    Long foraDoPeriodo = producao("5.000", "2026-07-10");
+    excluir("/api/v1/producoes/" + foraDoPeriodo).andExpect(status().isNoContent());
+  }
+
+  @Test
+  @Tag("P1")
+  void deveProtegerADiariaFamiliarEmitidaEPermitirCorrigirOsDiasQuandoPeriodoEstiverEmitido()
+      throws Exception {
+    garantirReferencia("2026-03-15");
+    garantirReferencia("2026-07-10");
+    Long familiar = diaria("FAMILIAR", "1.00", "null", "2026-03-15");
+    long e1 = emitir(produtor);
+    String conteudoE1 = conteudo(e1);
+
+    regra(
+        excluir("/api/v1/diarias/" + familiar),
+        "Esta diária já consta em relatório emitido e não pode ser excluída. Corrija pela"
+            + " alteração.");
+    regra(
+        enviar(
+            put("/api/v1/diarias/" + familiar),
+            diariaJson("FAMILIAR", "1.00", "null", "2026-07-10")),
+        "Esta diária já consta em relatório emitido. A data do fato não pode ser alterada.");
+    enviar(put("/api/v1/diarias/" + familiar), diariaJson("FAMILIAR", "2.00", "null", "2026-03-15"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.quantidadeDias").value(2.0));
+
+    assertThat(
+            jdbc.queryForObject(
+                "select data_fato::text from diaria where id = ?", String.class, familiar))
+        .isEqualTo("2026-03-15");
+    assertThat(conteudo(e1)).isEqualTo(conteudoE1);
+
+    Long foraDoPeriodo = diaria("FAMILIAR", "1.00", "null", "2026-07-10");
+    excluir("/api/v1/diarias/" + foraDoPeriodo).andExpect(status().isNoContent());
   }
 
   @Test

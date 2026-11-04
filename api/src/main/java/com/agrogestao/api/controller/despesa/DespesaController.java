@@ -89,7 +89,8 @@ public class DespesaController {
       description =
           "Recalcula o rateio com as áreas atuais só se mudarem o valor ou os plantios; senão"
               + " mantém o rateio gravado (RN05). Em período já emitido para o produtor, a data do"
-              + " fato não pode mudar (422); despesa estornada não é alterada (422).")
+              + " fato não pode mudar (422); despesa estornada não é alterada (422). O produtor não muda"
+              + " (422 com o campo produtorId).")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public DespesaResposta alterar(@PathVariable Long id, @Valid @RequestBody DespesaRequisicao dto) {
     return service.alterar(id, dto);

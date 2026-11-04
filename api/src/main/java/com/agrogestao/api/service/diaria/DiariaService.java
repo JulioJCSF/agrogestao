@@ -32,6 +32,10 @@ public class DiariaService {
 
   static final String DESPESA_ESTORNADA =
       "A despesa desta diária foi estornada. A diária não pode mais ser alterada nem excluída.";
+  static final String EXCLUSAO_EMITIDA =
+      "Esta diária já consta em relatório emitido e não pode ser excluída. Corrija pela alteração.";
+  static final String DATA_EMITIDA =
+      "Esta diária já consta em relatório emitido. A data do fato não pode ser alterada.";
 
   public PaginaResposta<DiariaResposta> listar(Long plantioId, PaginacaoConsulta consulta) {
     if (!plantios.existsById(plantioId))
@@ -88,8 +92,10 @@ public class DiariaService {
           "A natureza da diária não pode ser alterada. Exclua a diária e registre outra com a natureza correta.",
           List.of(
               new CampoErro("natureza", "Exclua e registre outra diária para mudar a natureza.")));
-    if (diaria.getNatureza() == NaturezaDiaria.PAGA && !dto.dataFato().equals(diaria.getDataFato()))
-      exigirDespesaNaoEmitida(despesaGerada(id));
+    if (!dto.dataFato().equals(diaria.getDataFato())) {
+      if (diaria.getNatureza() == NaturezaDiaria.PAGA) exigirDespesaNaoEmitida(despesaGerada(id));
+      else protecao.exigirNaoEmitido(produtorDe(diaria), diaria.getDataFato(), DATA_EMITIDA);
+    }
     preencher(diaria, dto);
     if (diaria.getNatureza() == NaturezaDiaria.PAGA) {
       Despesa despesa = despesaGerada(id);
@@ -110,6 +116,9 @@ public class DiariaService {
       exigirDespesaNaoEmitida(despesa);
       despesas.delete(despesa);
       despesas.flush();
+    } else {
+      // A03d (decisão 3 de 03/11): a familiar segue a regra da venda.
+      protecao.exigirNaoEmitido(produtorDe(diaria), diaria.getDataFato(), EXCLUSAO_EMITIDA);
     }
     repository.delete(diaria);
   }
@@ -130,6 +139,11 @@ public class DiariaService {
   private void exigirDespesaNaoEstornada(Diaria diaria) {
     if (diaria.getNatureza() == NaturezaDiaria.PAGA && despesaGerada(diaria.getId()).isEstornada())
       throw new RegraNegocioException(DESPESA_ESTORNADA);
+  }
+
+  /** "Período emitido" é sempre o do produtor do plantio (A03d). */
+  private static Long produtorDe(Diaria diaria) {
+    return diaria.getPlantio().getPropriedade().getProdutor().getId();
   }
 
   private Diaria bloquearDiaria(Long id) {

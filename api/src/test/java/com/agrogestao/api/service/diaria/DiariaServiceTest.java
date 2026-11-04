@@ -286,4 +286,47 @@ class DiariaServiceTest {
     exclusao.verify(repository).buscarParaAtualizar(diaria.id());
     exclusao.verify(plantios).buscarParaAtualizar(7L);
   }
+
+  // A03d: a familiar em período emitido segue a regra da venda (decisão 3 de 03/11).
+
+  DiariaResposta familiarEmitida() {
+    DiariaResposta diaria =
+        service.criar(7L, dto(NaturezaDiaria.FAMILIAR, "1", null, "2026-03-10"));
+    when(emissoes.existeEmissaoNoPeriodo(8L, LocalDate.of(2026, 3, 10))).thenReturn(true);
+    clearInvocations(repository);
+    return diaria;
+  }
+
+  @Test
+  void deveRecusarExclusaoETrocaDaDataQuandoFamiliarEstiverEmPeriodoEmitido() {
+    DiariaResposta diaria = familiarEmitida();
+    assertThatThrownBy(() -> service.excluir(diaria.id()))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(DiariaService.EXCLUSAO_EMITIDA);
+    assertThatThrownBy(
+            () ->
+                service.alterar(diaria.id(), dto(NaturezaDiaria.FAMILIAR, "1", null, "2026-03-11")))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(DiariaService.DATA_EMITIDA);
+    verify(repository, never()).delete(any(Diaria.class));
+    verify(repository, never()).saveAndFlush(any());
+    assertThat(gravadas.get(0).getDataFato()).isEqualTo(LocalDate.of(2026, 3, 10));
+  }
+
+  @Test
+  void deveAceitarCorrecaoDosDiasQuandoFamiliarEstiverEmPeriodoEmitido() {
+    DiariaResposta diaria = familiarEmitida();
+    DiariaResposta corrigida =
+        service.alterar(diaria.id(), dto(NaturezaDiaria.FAMILIAR, "2.5", null, "2026-03-10"));
+    assertThat(corrigida.quantidadeDias()).isEqualByComparingTo("2.5");
+    assertThat(corrigida.dataFato()).isEqualTo(LocalDate.of(2026, 3, 10));
+  }
+
+  @Test
+  void deveExcluirQuandoFamiliarEstiverForaDePeriodoEmitido() {
+    DiariaResposta diaria = familiarEmitida();
+    when(emissoes.existeEmissaoNoPeriodo(8L, LocalDate.of(2026, 3, 10))).thenReturn(false);
+    service.excluir(diaria.id());
+    verify(repository).delete(gravadas.get(0));
+  }
 }

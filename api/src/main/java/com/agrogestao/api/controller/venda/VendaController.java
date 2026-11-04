@@ -88,7 +88,8 @@ public class VendaController {
       summary = "Altera venda",
       description =
           "Substitui todos os itens e recalcula os totais; a data de coleta não muda (RN36). Em"
-              + " período já emitido para o produtor, a data do fato não pode mudar (422).")
+              + " período já emitido para o produtor, a data do fato não pode mudar (422). O produtor não"
+              + " muda (422 com o campo produtorId).")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public VendaResposta alterar(@PathVariable Long id, @Valid @RequestBody VendaRequisicao dto) {
     return service.alterar(id, dto);
