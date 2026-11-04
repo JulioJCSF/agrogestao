@@ -51,8 +51,10 @@ public class DiariaService {
             .orElseThrow(() -> new RecursoNaoEncontradoException("Diária não encontrada.")));
   }
 
+  /** A03e: trava o produtor do plantio antes do plantio, como a alteração e a exclusão. */
   @Transactional
   public DiariaResposta criar(Long plantioId, DiariaRequisicao dto) {
+    travarProdutorDoPlantio(plantioId);
     Diaria diaria = new Diaria();
     diaria.setPlantio(bloquearPlantio(plantioId));
     preencher(diaria, dto);
@@ -133,6 +135,14 @@ public class DiariaService {
             .buscarProdutorId(id)
             .orElseThrow(() -> new RecursoNaoEncontradoException("Diária não encontrada.")));
     return bloquearDiaria(id);
+  }
+
+  /** Lê só o produtor do plantio, sem carregar o plantio, e o trava; plantio inexistente → 404. */
+  private void travarProdutorDoPlantio(Long plantioId) {
+    protecao.travarProdutor(
+        plantios
+            .buscarProdutorId(plantioId)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado.")));
   }
 
   /** Decisão 3 de 03/11: a diária paga acompanha a despesa estornada e fica congelada. */

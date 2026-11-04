@@ -47,7 +47,6 @@ class VendaServiceTest {
       new VendaService(
           repository,
           itensVenda,
-          produtores,
           clientes,
           plantios,
           producoes,
@@ -555,5 +554,24 @@ class VendaServiceTest {
     InOrder exclusao = inOrder(produtores, repository);
     exclusao.verify(produtores).buscarParaAtualizar(PRODUTOR);
     exclusao.verify(repository).delete(any(Venda.class));
+  }
+
+  // A03e: a venda nova trava o produtor antes dos plantios.
+
+  @Test
+  void deveTravarProdutorAntesDosPlantiosQuandoCriar() {
+    service.criar(venda(item(3L, "1.000", "kg", "2.00"), item(1L, "1.000", "kg", "2.00")));
+    InOrder ordem = inOrder(produtores, plantios);
+    ordem.verify(produtores).buscarParaAtualizar(PRODUTOR);
+    ordem.verify(plantios).buscarParaAtualizar(1L);
+    ordem.verify(plantios).buscarParaAtualizar(3L);
+  }
+
+  @Test
+  void deveRecusarSemTravarProdutorQuandoQuantidadeNaoForPositiva() {
+    assertThatThrownBy(() -> service.criar(venda(item(1L, "0.000", "kg", "2.00"))))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage("A quantidade do item deve ser maior que zero.");
+    verifyNoInteractions(produtores, plantios);
   }
 }

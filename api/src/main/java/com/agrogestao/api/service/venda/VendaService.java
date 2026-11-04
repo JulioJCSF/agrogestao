@@ -29,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
  * arredondados (RN30). O saldo nunca bloqueia (RN29): quando o vendido acumulado de um plantio
  * passa do produzido, a resposta leva um aviso, recalculado também nas consultas. Produzido e
  * vendido vêm do {@link SaldoPlantioService}, a mesma conta do saldo do plantio (M05).
+ *
+ * <p>A03e: a criação também trava o produtor antes dos plantios, para a venda nova não entrar no
+ * meio de uma emissão do mesmo produtor (RN31, RN34).
  */
 @Service
 @RequiredArgsConstructor
@@ -38,7 +41,6 @@ public class VendaService {
 
   private final VendaRepository repository;
   private final ItemVendaRepository itensVenda;
-  private final ProdutorRepository produtores;
   private final ClienteRepository clientes;
   private final PlantioRepository plantios;
   private final ProducaoRepository producoes;
@@ -150,9 +152,10 @@ public class VendaService {
   }
 
   /**
-   * Validações 2 a 6 da L09b, nesta ordem; a 1 (formato) é do Bean Validation no DTO. Os plantios
-   * são travados em ordem crescente de id, sem repetir, antes das regras que leem o estado deles:
-   * fecha a corrida com o encerramento (RN04) sem deadlock entre vendas de vários plantios.
+   * Validações 2 a 6 da L09b, nesta ordem; a 1 (formato) é do Bean Validation no DTO. O produtor é
+   * travado onde era procurado (A03e), e os plantios depois, em ordem crescente de id, sem repetir,
+   * antes das regras que leem o estado deles: fecha a corrida com o encerramento (RN04) sem
+   * deadlock entre vendas de vários plantios. Na alteração, o lock repetido do produtor não espera.
    */
   private Vinculos validar(VendaRequisicao dto) {
     List<ItemVendaRequisicao> itens = dto.itens();
@@ -170,10 +173,7 @@ public class VendaService {
             "valorUnitario",
             "Informe um valor unitário maior que zero.");
     }
-    Produtor produtor =
-        produtores
-            .findById(dto.produtorId())
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Produtor não encontrado."));
+    Produtor produtor = protecao.travarProdutor(dto.produtorId());
     Cliente cliente =
         clientes
             .findById(dto.clienteId())

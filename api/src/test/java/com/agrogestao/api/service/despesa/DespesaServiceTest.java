@@ -40,7 +40,6 @@ class DespesaServiceTest {
   DespesaService service =
       new DespesaService(
           repo,
-          produtores,
           categorias,
           plantios,
           rateios,
@@ -77,7 +76,6 @@ class DespesaServiceTest {
     adubo.setNome("Adubo e fertilizantes");
     diaria.setNome("Diária");
     diaria.setSistema(true);
-    when(produtores.findById(1L)).thenReturn(Optional.of(produtor));
     // A03b: o produtor é travado antes de a despesa ser lida.
     when(produtores.buscarParaAtualizar(1L)).thenReturn(Optional.of(produtor));
     when(repo.buscarProdutorId(anyLong()))
@@ -335,7 +333,8 @@ class DespesaServiceTest {
     comId(despesa, id);
     despesa.setDiaria(geradora);
     when(repo.findById(id)).thenReturn(Optional.of(despesa));
-    clearInvocations(plantios, repo);
+    // A03e: a criação acima também trava o produtor.
+    clearInvocations(plantios, repo, produtores);
     return despesa;
   }
 
@@ -574,5 +573,24 @@ class DespesaServiceTest {
     exclusao.verify(repo).findById(6L);
     exclusao.verify(emissoes).existeEmissaoNoPeriodo(1L, FATO);
     exclusao.verify(repo).delete(any(Despesa.class));
+  }
+
+  // A03e: a despesa nova trava o produtor antes dos plantios.
+
+  @Test
+  void deveTravarProdutorAntesDosPlantiosQuandoLancar() {
+    service.criar(entrada("90.00", List.of(13L, 11L)));
+    var ordem = inOrder(produtores, plantios);
+    ordem.verify(produtores).buscarParaAtualizar(1L);
+    ordem.verify(plantios).buscarParaAtualizar(11L);
+    ordem.verify(plantios).buscarParaAtualizar(13L);
+  }
+
+  @Test
+  void deveRecusarSemTravarProdutorQuandoValorNaoForPositivo() {
+    assertThatThrownBy(() -> service.criar(entrada("0.00", List.of(11L))))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage("O valor da despesa deve ser maior que zero.");
+    verifyNoInteractions(produtores, plantios);
   }
 }

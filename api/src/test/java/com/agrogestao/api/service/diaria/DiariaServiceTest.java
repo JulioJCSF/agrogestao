@@ -53,6 +53,7 @@ class DiariaServiceTest {
     propriedade.setProdutor(produtor);
     plantio.setPropriedade(propriedade);
     when(plantios.buscarParaAtualizar(7L)).thenReturn(Optional.of(plantio));
+    when(plantios.buscarProdutorId(7L)).thenReturn(Optional.of(8L));
     // A03b: produtor, diária e plantio, nessa ordem.
     when(produtores.buscarParaAtualizar(8L)).thenReturn(Optional.of(produtor));
     when(referencias.buscarVigente(any()))
@@ -328,5 +329,26 @@ class DiariaServiceTest {
     when(emissoes.existeEmissaoNoPeriodo(8L, LocalDate.of(2026, 3, 10))).thenReturn(false);
     service.excluir(diaria.id());
     verify(repository).delete(gravadas.get(0));
+  }
+
+  // A03e: a diária nova trava o produtor do plantio, lido por projeção, antes do plantio.
+
+  @Test
+  void deveTravarProdutorDoPlantioAntesDoPlantioQuandoRegistrar() {
+    service.criar(7L, dto(NaturezaDiaria.PAGA, "2", "90", "2026-03-10"));
+    var ordem = inOrder(plantios, produtores);
+    ordem.verify(plantios).buscarProdutorId(7L);
+    ordem.verify(produtores).buscarParaAtualizar(8L);
+    ordem.verify(plantios).buscarParaAtualizar(7L);
+    verify(plantios, never()).findById(any());
+  }
+
+  @Test
+  void deveResponder404DoPlantioSemTravarQuandoRegistrarEmPlantioInexistente() {
+    assertThatThrownBy(() -> service.criar(99L, dto(NaturezaDiaria.PAGA, "2", "90", "2026-03-10")))
+        .isInstanceOf(RecursoNaoEncontradoException.class)
+        .hasMessage("Plantio não encontrado.");
+    verifyNoInteractions(produtores);
+    verify(plantios, never()).buscarParaAtualizar(any());
   }
 }

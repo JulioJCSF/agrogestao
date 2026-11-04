@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>A03d (RN11, RN34; decisão 3 de 03/11): como a venda, a produção com data do fato em período
  * emitido do produtor do plantio não é excluída nem tem a data trocada; quantidade e unidade (RN38)
  * continuam corrigíveis. Alterar e excluir travam o produtor antes da produção, do plantio e da
- * cultura ({@link ProtecaoEmissao}).
+ * cultura ({@link ProtecaoEmissao}). A criação também trava o produtor antes do plantio (A03e).
  */
 @Service
 @RequiredArgsConstructor
@@ -46,6 +46,10 @@ public class ProducaoService {
 
   @Transactional
   public ProducaoResposta criar(Long plantioId, ProducaoRequisicao dto) {
+    protecao.travarProdutor(
+        plantios
+            .buscarProdutorId(plantioId)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Plantio não encontrado.")));
     Producao producao = new Producao();
     producao.setPlantio(bloquearPlantio(plantioId));
     preencher(producao, dto);

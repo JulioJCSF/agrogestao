@@ -350,6 +350,8 @@ Data do fato e data de coleta são colunas distintas em todo registro que descre
 
 `emissao_relatorio` é só de inserção: gatilhos recusam `UPDATE`, `DELETE` e `TRUNCATE` (RN34), e a violação que chegar à API responde 422 pelo mapeamento de `DataIntegrityViolationException` (2.4). Uma correção de dados nessa tabela exige migration própria e revisada.
 
+**Ordem de locks.** Toda escrita em lançamento (criar, alterar, excluir e estornar despesa, diária, produção e venda) e a alteração e o encerramento de plantio travam primeiro o produtor (`ProtecaoEmissao.travarProdutor`), depois a diária, os plantios em ordem crescente de id e, por último, a cultura. Quando o produtor vem de um registro, o id dele é lido por projeção, sem carregar nem travar o registro antes. A emissão do relatório trava o mesmo produtor e lê o banco em várias consultas; com essa ordem, nada do produtor muda enquanto ela lê, e o documento sai coerente consigo mesmo (RN31, RN34). A ordem única também evita deadlock. A emissão roda em `READ COMMITTED`: no PostgreSQL, `REPEATABLE READ` tiraria a foto do banco antes de esperar o lock do produtor.
+
 ---
 
 ## 2.6 Git Flow e Pull Requests
