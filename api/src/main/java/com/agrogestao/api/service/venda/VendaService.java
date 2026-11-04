@@ -46,6 +46,8 @@ public class VendaService {
       "Esta venda já consta em relatório emitido e não pode ser excluída. Corrija pela alteração.";
   static final String DATA_EMITIDA =
       "Esta venda já consta em relatório emitido. A data do fato não pode ser alterada.";
+  static final String OUTRO_PRODUTOR =
+      "A venda não pode ser transferida para outro produtor. Exclua e lance de novo.";
 
   public PaginaResposta<VendaResposta> listar(
       Long produtorId, LocalDate periodoInicio, LocalDate periodoFim, PaginacaoConsulta consulta) {
@@ -93,12 +95,16 @@ public class VendaService {
 
   /**
    * Substitui todos os itens; a data de coleta fica a original (RN36). Em período emitido, tudo
-   * continua corrigível menos a data do fato (decisão 2 de 03/11). Trava o produtor antes de ler a
-   * venda e antes dos plantios.
+   * continua corrigível menos a data do fato (decisão 2 de 03/11), e o produtor nunca muda (A03d).
+   * Trava o produtor antes de ler a venda e antes dos plantios.
    */
   @Transactional
   public VendaResposta alterar(Long id, VendaRequisicao dto) {
     Venda venda = travar(id);
+    if (!venda.getProdutor().getId().equals(dto.produtorId()))
+      throw new RegraNegocioException(
+          OUTRO_PRODUTOR,
+          List.of(new CampoErro("produtorId", "Informe o produtor atual da venda.")));
     if (!venda.getDataFato().equals(dto.dataFato()))
       protecao.exigirNaoEmitido(venda.getProdutor().getId(), venda.getDataFato(), DATA_EMITIDA);
     Vinculos vinculos = validar(dto);
@@ -117,7 +123,10 @@ public class VendaService {
     repository.delete(venda);
   }
 
-  /** Trava o produtor da venda e só então a lê; se a venda mudou de produtor, trava o novo. */
+  /**
+   * Trava o produtor da venda e só então a lê. A releitura é defensiva (a alteração não troca o
+   * produtor, A03d): se a venda mudou de produtor, trava o novo, ainda antes de qualquer plantio.
+   */
   private Venda travar(Long id) {
     Long produtorId =
         repository

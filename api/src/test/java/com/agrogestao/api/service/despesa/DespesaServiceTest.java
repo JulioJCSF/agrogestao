@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.agrogestao.api.dto.*;
+import com.agrogestao.api.dto.ErroResposta.CampoErro;
 import com.agrogestao.api.exception.*;
 import com.agrogestao.api.model.*;
 import com.agrogestao.api.repository.*;
@@ -433,6 +434,28 @@ class DespesaServiceTest {
   static DespesaRequisicao comData(LocalDate data) {
     return new DespesaRequisicao(
         1L, 2L, "Adubo de teste", new BigDecimal("90.00"), data, List.of(11L, 12L));
+  }
+
+  // A03d (decisão 1 de 03/11): a alteração não troca o produtor.
+
+  @Test
+  void deveRecusarComCampoProdutorSemTravarONovoQuandoAlteracaoTrocarOProdutor() {
+    existente(5L, null);
+    emitido();
+    var paraOVizinho =
+        new DespesaRequisicao(
+            9L, 2L, "Adubo de teste", new BigDecimal("90.00"), FATO, List.of(19L));
+    assertThatThrownBy(() -> service.alterar(5L, paraOVizinho))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(DespesaService.OUTRO_PRODUTOR)
+        .extracting(e -> ((RegraNegocioException) e).getCampos())
+        .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.list(CampoErro.class))
+        .extracting(CampoErro::campo)
+        .containsExactly("produtorId");
+    verify(produtores, never()).buscarParaAtualizar(9L);
+    verifyNoInteractions(plantios);
+    verify(repo, never()).saveAndFlush(any());
+    verify(repo, never()).save(any());
   }
 
   @Test

@@ -71,7 +71,11 @@ public class ProducaoController {
   }
 
   @PutMapping("/api/v1/producoes/{id}")
-  @Operation(summary = "Altera uma produção")
+  @Operation(
+      summary = "Altera uma produção",
+      description =
+          "Quantidade e unidade (RN38) continuam corrigíveis; em período já emitido para o produtor"
+              + " do plantio, a data do fato não pode mudar (422).")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public ProducaoResposta alterar(
       @PathVariable Long id, @Valid @RequestBody ProducaoRequisicao dto) {
@@ -80,7 +84,11 @@ public class ProducaoController {
 
   @DeleteMapping("/api/v1/producoes/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(summary = "Exclui uma produção")
+  @Operation(
+      summary = "Exclui uma produção",
+      description =
+          "Em período já emitido para o produtor do plantio, 422: a produção não tem estorno e se"
+              + " corrige pela alteração.")
   @ApiResponse(responseCode = "204", description = "Operação sem corpo")
   public void excluir(@PathVariable Long id) {
     service.excluir(id);

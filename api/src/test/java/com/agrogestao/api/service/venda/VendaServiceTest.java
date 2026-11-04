@@ -521,6 +521,25 @@ class VendaServiceTest {
   }
 
   @Test
+  void deveRecusarComCampoProdutorSemTravarONovoQuandoAlteracaoTrocarOProdutor() {
+    Venda venda = existente(50L);
+    VendaRequisicao paraOutro =
+        new VendaRequisicao(
+            OUTRO_PRODUTOR, CLIENTE, DATA_FATO, List.of(item(9L, "1.000", "kg", "2.00")));
+    assertThatThrownBy(() -> service.alterar(50L, paraOutro))
+        .isInstanceOf(RegraNegocioException.class)
+        .hasMessage(VendaService.OUTRO_PRODUTOR)
+        .extracting(e -> ((RegraNegocioException) e).getCampos())
+        .asInstanceOf(InstanceOfAssertFactories.list(CampoErro.class))
+        .extracting(CampoErro::campo)
+        .containsExactly("produtorId");
+    verify(produtores, never()).buscarParaAtualizar(OUTRO_PRODUTOR);
+    verify(plantios, never()).buscarParaAtualizar(anyLong());
+    assertNadaGravado();
+    assertThat(venda.getItens()).hasSize(1);
+  }
+
+  @Test
   void deveTravarProdutorAntesDaVendaEDosPlantiosQuandoAlterarOuExcluir() {
     existente(50L);
     service.alterar(50L, venda(item(1L, "1.000", "kg", "2.00")));

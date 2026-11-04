@@ -23,6 +23,13 @@ public interface ProducaoRepository extends JpaRepository<Producao, Long> {
 
   boolean existsByPlantioPropriedadeProdutorId(Long produtorId);
 
+  /**
+   * Só o produtor do plantio da produção, sem carregar a entidade: o produtor é travado antes da
+   * produção, do plantio e da cultura (A03d).
+   */
+  @Query("select p.plantio.propriedade.produtor.id from Producao p where p.id = :id")
+  Optional<Long> buscarProdutorId(@Param("id") Long id);
+
   /** Primeira produção do plantio: a unidade de referência do item de venda (RN30, L09b). */
   Optional<Producao> findFirstByPlantioIdOrderByIdAsc(Long plantioId);
 

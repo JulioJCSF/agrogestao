@@ -78,8 +78,8 @@ public class DiariaController {
       summary = "Altera uma diária",
       description =
           "Mantém a natureza; acompanha a despesa paga. Na familiar, preserva o valor copiado, salvo quando a data do fato é corrigida."
-              + " Paga com a despesa em período já emitido: a data não muda (422). Paga com a despesa"
-              + " estornada: 422.")
+              + " Em período já emitido (na paga, pela despesa gerada): a data não muda (422). Paga"
+              + " com a despesa estornada: 422.")
   @ApiResponse(responseCode = "200", description = "Resposta prevista no contrato")
   public DiariaResposta alterar(@PathVariable Long id, @Valid @RequestBody DiariaRequisicao dto) {
     return service.alterar(id, dto);
@@ -90,7 +90,8 @@ public class DiariaController {
   @Operation(
       summary = "Exclui diária e sua despesa gerada",
       description =
-          "Paga com a despesa em período já emitido ou estornada: 422 (use o estorno da despesa).")
+          "Paga com a despesa em período já emitido ou estornada: 422 (use o estorno da despesa)."
+              + " Familiar em período já emitido: 422 (corrija pela alteração).")
   @ApiResponse(responseCode = "204", description = "Operação sem corpo")
   public void excluir(@PathVariable Long id) {
     service.excluir(id);
