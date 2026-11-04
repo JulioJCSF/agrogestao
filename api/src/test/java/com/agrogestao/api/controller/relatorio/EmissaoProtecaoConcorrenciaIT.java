@@ -96,7 +96,7 @@ class EmissaoProtecaoConcorrenciaIT extends IntegracaoTest {
   void limpar() {
     relogio.restaurar();
     for (Long id : produtores) {
-      jdbc.update("delete from emissao_relatorio where produtor_id = ?", id);
+      LimpezaTeste.apagarEmissoes(jdbc, id);
       jdbc.update("delete from despesa where produtor_id = ?", id);
       jdbc.update(
           "delete from producao where plantio_id in (select p.id from plantio p join propriedade r on r.id = p.propriedade_id where r.produtor_id = ?)",

@@ -372,6 +372,8 @@ CREATE INDEX idx_emissao_relatorio_produtor_id
 
 Reemitir o mesmo período gera nova linha; a anterior permanece.
 
+**A tabela é só de inserção, também no banco.** A migration `V20261104_1000__protege_emissao_relatorio.sql` cria a função `recusa_alteracao_emissao_relatorio()` e dois gatilhos: `tg_emissao_relatorio_imutavel` (`BEFORE UPDATE OR DELETE`, por linha) e `tg_emissao_relatorio_sem_truncate` (`BEFORE TRUNCATE`, por comando, porque o gatilho de linha não pega `TRUNCATE`). Os dois levantam `restrict_violation` (23001) com a mensagem da `RN34`. Sem eles, a imutabilidade dependeria só de a API não oferecer `PUT` nem `DELETE`, e um bug, um script ou um SQL manual apagariam um documento já entregue sem deixar rastro. Uma correção de dados futura exige migration própria e revisada, que desligue os gatilhos explicitamente só naquele script.
+
 ---
 
 ## 4. Ordem das migrations
@@ -427,6 +429,8 @@ Nem toda regra cabe em restrição declarativa. Estas ficam na camada de serviç
 | RN24 — período de apuração pelo ciclo | Lógica de derivação |
 | RN29 — saldo não bloqueia venda | Ausência deliberada de restrição |
 | RN37 — consentimento como condição para emissão | Depende de estado de outra tabela |
+
+A `RN34` (emissão não muda nem é apagada) é a exceção: o serviço só insere, e o banco também recusa `UPDATE`, `DELETE` e `TRUNCATE` em `emissao_relatorio` pelos gatilhos da seção 3.
 
 A RN29 merece nota: a **ausência** de restrição é decisão, não esquecimento. Ninguém deve acrescentar um `CHECK` de saldo depois achando que faltou.
 

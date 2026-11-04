@@ -92,7 +92,7 @@ class DiariaIT extends IntegracaoTest {
   void limpar() {
     reset(rateios, despesas, diarias, lancamentos);
     relogio.restaurar();
-    jdbc.update("delete from emissao_relatorio where produtor_id=?", produtor);
+    LimpezaTeste.apagarEmissoes(jdbc, produtor);
     jdbc.update("delete from despesa where produtor_id=?", produtor);
     jdbc.update("delete from diaria where plantio_id in (?,?)", plantio, outro);
     jdbc.update("delete from valor_referencia_diaria where id=?", referencia);
