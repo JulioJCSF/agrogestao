@@ -29,6 +29,8 @@ Requisitos numerados e rastreáveis do sistema. Cada requisito funcional aponta 
 | RF04 | O sistema deve encerrar a sessão após período de inatividade | Média | Fase 0 |
 | RF05 | O sistema deve permitir ao administrador cadastrar e desativar usuários | Média | R4 |
 
+RF04: o período de inatividade é de **30 minutos**, definido pelo responsável em 04/11/2026 na implementação da M09 (#83). Interações de teclado, ponteiro, rolagem e toque reiniciam a contagem; consultas automáticas e recargas não. Ao atingir o prazo, o front remove a sessão e volta ao login com uma mensagem. O retorno de uma aba suspensa também verifica o prazo antes de aceitar nova interação. A expiração absoluta do token continua independente, sem renovação automática.
+
 RF02 vale assim, por decisão de 27/10: CONSULTA só lê (todo GET da API); LANCAMENTO lê e grava (POST, PUT, DELETE e PATCH), inclusive as configurações (culturas, categorias e valor de referência), o encerramento, o estorno e a emissão de relatório; ADMIN faz tudo, e só ele acessa `/usuarios`, inclusive para leitura. Perfil e situação do usuário são conferidos a cada requisição; desativar corta o acesso imediatamente. O autor de cada registro (RF03) é o usuário logado; fora de uma requisição, como na inicialização, é o administrador.
 
 RF05 vale assim, por decisão de 03/11: usuário não é excluído, só desativado. O login é gravado aparado e em minúsculas, é único sem diferenciar caixa, e a autenticação também não diferencia caixa. Nenhuma alteração pode deixar o sistema sem ADMIN ativo: desativar ou rebaixar o último responde 422. O administrador redefine a senha de qualquer usuário (`PUT /usuarios/{id}/senha`), com 8 a 72 caracteres e no máximo 72 bytes; a senha nunca volta em resposta, log ou mensagem de erro.

@@ -465,7 +465,7 @@ function GlobalSearch({ onClose }) {
 }
 
 function Login() {
-  const { session, login } = useAuth()
+  const { session, login, sessionMessage } = useAuth()
   const navigate = useNavigate()
   const [loginName, setLoginName] = useState('')
   const [password, setPassword] = useState('')
@@ -509,6 +509,11 @@ function Login() {
           </p>
         </div>
         <form className="login-form" onSubmit={submit}>
+          {sessionMessage && (
+            <p className="notice" role="status" data-testid="session-message">
+              {sessionMessage}
+            </p>
+          )}
           {mockEnabled && (
             <p className="notice" data-testid="mock-logins">
               Mock da API ligado. Entre com <strong>admin.mock</strong>,{' '}

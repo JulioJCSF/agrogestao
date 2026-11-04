@@ -272,6 +272,10 @@ A RN25 acrescenta ao conteúdo do relatório a distinção entre quantidade prod
 
 ---
 
+## Sessão por inatividade (RF04)
+
+Após **30 minutos sem interação**, a sessão do operador é removida e o login informa o encerramento por inatividade (M09, #83; prazo definido pelo responsável em 04/11/2026). Teclado, ponteiro, rolagem e toque renovam o prazo. Recarregar a página e consultas automáticas não renovam a última atividade. Ao retornar de suspensão, verifica-se o prazo antes de aceitar nova interação. A expiração absoluta do token permanece independente.
+
 ## Rastreabilidade
 
 | Origem | Regras |
