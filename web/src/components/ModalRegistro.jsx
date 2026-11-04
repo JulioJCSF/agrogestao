@@ -275,6 +275,7 @@ export function ModalRegistro({ modal, onClose, notify, openModal }) {
           ]),
         ),
       )
+      if (cause.campos?.length) setConfirming(false)
     } finally {
       setSaving(false)
     }

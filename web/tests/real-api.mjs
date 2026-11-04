@@ -66,7 +66,7 @@ try {
     await new Promise((done) => setTimeout(done, 1000))
   }
   if (!ready) throw new Error('A API não ficou pronta em 90 segundos.')
-  // Remove snapshots legados incompatíveis só da fixture descartável; a API continua imutável.
+  // Temporário até a #152: a migration de dados iniciais grava emissões em formato antigo, que quebram a leitura de relatórios. Remover quando a correção entrar.
   await exec('docker', [
     'exec',
     name,

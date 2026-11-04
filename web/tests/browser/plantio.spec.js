@@ -380,6 +380,34 @@ test('422 no encerramento mostra a mensagem da API e preserva a data para corrig
   await expect(tela.campo('planting-status')).toHaveText('Em andamento')
 })
 
+test('400 com erro de campo no encerramento volta ao formulário e mostra o erro na data', async ({
+  page,
+}) => {
+  const { tela } = await preparar(page)
+  await page.route('**/api/v1/plantios/1/encerramento', (route) =>
+    route.fulfill({
+      status: 400,
+      json: {
+        mensagem: 'Confira a data informada.',
+        campos: [
+          { campo: 'dataEncerramento', mensagem: 'Informe uma data válida.' },
+        ],
+      },
+    }),
+  )
+  await tela.abrir()
+  await tela.informarEncerramento('30/06/2026')
+  await tela.pedirConfirmacao()
+  await tela.confirmar()
+  await expect(tela.campo('close-planting-confirmation')).toHaveCount(0)
+  await expect(tela.campo('field-endedAt')).toBeVisible()
+  await expect(tela.campo('field-endedAt-error')).toHaveText(
+    'Informe uma data válida.',
+  )
+  await expect(tela.campo('field-endedAt')).toHaveValue('30/06/2026')
+  await expect(tela.campo('planting-status')).toHaveText('Em andamento')
+})
+
 test('CONSULTA lê detalhe e resultado sem ações de gravação', async ({
   page,
 }) => {
@@ -488,10 +516,6 @@ test('encerramento bloqueia envio duplicado e erro de campo volta à data', asyn
     tela.campo('close-planting-confirmation-cancelar'),
   ).toBeDisabled()
   liberar()
-  await expect(tela.campo('close-planting-confirmation-erro')).toHaveText(
-    'Confira a data informada.',
-  )
-  await tela.cancelarConfirmacao()
   await expect(tela.campo('field-endedAt-error')).toHaveText(
     'Data inválida enviada pela API.',
   )
