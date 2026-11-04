@@ -1,9 +1,8 @@
 import { banco, buscar, mensagensNaoEncontrado } from '../banco.js'
-import { hoje, idDoCaminho, parametro } from '../respostas.js'
-import { APURACAO_FIXA, resultadoFixo } from './resultado.js'
+import { escalar, hoje, idDoCaminho, numero, parametro } from '../respostas.js'
+import { resultadoFixo } from './resultado.js'
 
-// Saldo e painel são exemplos fixos, coerentes com a massa; o cálculo pertence à API.
-const SALDO_FIXO = { 1: 70.5, 2: 80, 3: 100 }
+// O painel é exemplo fixo, coerente com a massa; o cálculo pertence à API.
 
 const PAINEL_FIXO = { receita: 485, custoDesembolso: 410, resultado: 75 }
 
@@ -17,12 +16,25 @@ export default [
         idDoCaminho(params),
         mensagensNaoEncontrado.plantios,
       )
-      const fixo = APURACAO_FIXA[plantio.id]
+      // Exceção à regra dos cálculos fixos (M05): a M06 exibe o saldo e testa contra o mock.
+      const somar = (quantidades) =>
+        quantidades.reduce((soma, q) => soma + escalar(q, 3), 0n)
+      const produzido = somar(
+        banco.producoes
+          .filter((p) => p.plantioId === plantio.id)
+          .map((p) => p.quantidade),
+      )
+      const vendido = somar(
+        banco.vendas
+          .flatMap((v) => v.itens)
+          .filter((i) => i.plantioId === plantio.id)
+          .map((i) => i.quantidade),
+      )
       return {
         plantioId: plantio.id,
-        quantidadeProduzida: fixo?.quantidadeProduzida ?? 0,
-        quantidadeVendida: fixo?.quantidadeVendida ?? 0,
-        saldo: SALDO_FIXO[plantio.id] ?? 0,
+        quantidadeProduzida: numero(produzido, 3),
+        quantidadeVendida: numero(vendido, 3),
+        saldo: numero(produzido - vendido, 3),
         unidadeMedida: buscar('culturas', plantio.culturaId).unidadeMedida,
       }
     },

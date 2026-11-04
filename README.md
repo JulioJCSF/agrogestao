@@ -126,7 +126,8 @@ Com o mock ligado, o MSW responde na camada de rede às mesmas chamadas que as t
 - O mock só existe no `npm run dev`. O build de produção nunca inclui o MSW nem o worker, mesmo com a variável ligada; a homologação usa sempre a API real.
 - Cadastros e lançamentos ficam em memória e somem ao recarregar a página. Todos os dados são fictícios (RNF10).
 - Em Usuários, o mock segue as regras da M01: login sem diferenciar caixa, 422 ao desativar ou rebaixar o último ADMIN ativo e redefinição de senha pelo administrador (`PUT /usuarios/{id}/senha`, 204). A senha nova vale para o login até recarregar a página.
-- Resultado, saldo, painel e o conteúdo do relatório são exemplos fixos, coerentes com a massa do mock: rateio, apuração e relatório pertencem à API. O mock refaz só o rateio da despesa (RN09), o total da diária paga e o do item de venda, que a tela mostra logo depois de gravar.
+- Resultado, painel e o conteúdo do relatório são exemplos fixos, coerentes com a massa do mock: rateio, apuração e relatório pertencem à API. O mock refaz só o rateio da despesa (RN09), o total da diária paga e o do item de venda, que a tela mostra logo depois de gravar.
+- O saldo do plantio (`GET /plantios/{id}/saldo`) é calculado pelo mock: produção menos vendas do plantio na massa em memória, sem período e com sinal. É exceção aos cálculos fixos porque a tela de venda (M06) exibe o saldo e é testada contra o mock (M05).
 - O código fica em `web/src/mocks/`: `banco.js` (massa), `handlers/` (um arquivo por módulo) e `respostas.js` (formato de erro e paginação).
 - Quando um endpoint mudar na API, ajuste o handler do módulo. `npm run test:mock-cobertura` compara os controllers Java com os handlers e falha se faltar algum; ele roda no CI.
 
