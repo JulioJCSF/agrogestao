@@ -74,7 +74,7 @@ class ProtecaoEmissaoIT extends IntegracaoTest {
   void limpar() {
     relogio.restaurar();
     for (Long id : produtores) {
-      jdbc.update("delete from emissao_relatorio where produtor_id = ?", id);
+      LimpezaTeste.apagarEmissoes(jdbc, id);
       jdbc.update("delete from venda where produtor_id = ?", id);
       jdbc.update("delete from despesa where produtor_id = ?", id);
       String doProdutor =

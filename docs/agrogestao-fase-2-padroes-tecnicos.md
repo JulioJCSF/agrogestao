@@ -348,6 +348,8 @@ Chave estrangeira sempre declarada no banco, não só no JPA. `NOT NULL` em tudo
 
 Data do fato e data de coleta são colunas distintas em todo registro que descreve um evento, conforme o glossário.
 
+`emissao_relatorio` é só de inserção: gatilhos recusam `UPDATE`, `DELETE` e `TRUNCATE` (RN34), e a violação que chegar à API responde 422 pelo mapeamento de `DataIntegrityViolationException` (2.4). Uma correção de dados nessa tabela exige migration própria e revisada.
+
 ---
 
 ## 2.6 Git Flow e Pull Requests

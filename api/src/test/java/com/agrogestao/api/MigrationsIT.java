@@ -15,7 +15,7 @@ class MigrationsIT extends IntegracaoTest {
   @Test
   void deveAplicarMigrationsQuandoBancoEstiverLimpo() {
     assertThat(flyway.info().pending()).isEmpty();
-    assertThat(flyway.info().applied()).hasSize(12);
+    assertThat(flyway.info().applied()).hasSize(13);
     assertThat(
             jdbc.queryForObject(
                 "select count(*) from pg_extension where extname='btree_gist'", Integer.class))
@@ -26,6 +26,22 @@ class MigrationsIT extends IntegracaoTest {
                 "select count(*) from produtor where nome like 'Produtor Fictício Dev %'",
                 Integer.class))
         .isZero();
+  }
+
+  /** A03c: os gatilhos da RN34 em emissao_relatorio e a função que eles chamam. */
+  @Test
+  void deveCriarGatilhosDaEmissaoQuandoAplicarMigrations() {
+    assertThat(
+            jdbc.queryForList(
+                "select tgname from pg_trigger where tgrelid = 'emissao_relatorio'::regclass"
+                    + " and not tgisinternal order by tgname",
+                String.class))
+        .containsExactly("tg_emissao_relatorio_imutavel", "tg_emissao_relatorio_sem_truncate");
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from pg_proc where proname = 'recusa_alteracao_emissao_relatorio'",
+                Integer.class))
+        .isOne();
   }
 
   @Test
