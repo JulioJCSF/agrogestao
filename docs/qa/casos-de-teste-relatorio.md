@@ -78,7 +78,7 @@ Sintética, conforme `RNF10`. Criada pela API (ou por fixture, nos casos de inte
 | Plantios | Criados por caso, `data_inicio` 2026-02-01, abertos salvo indicação |
 | Categorias | "Sementes e mudas", "Adubo e fertilizantes" e "Diária" (sistema), da migration |
 | Cliente | "Cliente Teste Relatório", canal `FEIRA` |
-| Valor de referência em 2026 | 80,00, vigente de 2026-01-01 em diante — já gravado pela migration de dados iniciais (ver ponto 8 da Q00c) |
+| Valor de referência em 2026 | 80,00, vigente de 2026-01-01 em diante, criado pelo próprio caso quando nenhum cobre a data (a migration não grava mais referência; ver ponto 8 da Q00c) |
 | Período de emissão padrão | 2026-01-01 a 2026-06-30 |
 
 ---

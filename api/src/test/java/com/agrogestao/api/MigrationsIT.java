@@ -15,7 +15,7 @@ class MigrationsIT extends IntegracaoTest {
   @Test
   void deveAplicarMigrationsQuandoBancoEstiverLimpo() {
     assertThat(flyway.info().pending()).isEmpty();
-    assertThat(flyway.info().applied()).hasSize(13);
+    assertThat(flyway.info().applied()).hasSize(14);
     assertThat(
             jdbc.queryForObject(
                 "select count(*) from pg_extension where extname='btree_gist'", Integer.class))
@@ -26,6 +26,50 @@ class MigrationsIT extends IntegracaoTest {
                 "select count(*) from produtor where nome like 'Produtor Fictício Dev %'",
                 Integer.class))
         .isZero();
+  }
+
+  /**
+   * E00: a carga inicial deixa só o admin, as categorias e as culturas; os gatilhos voltam ligados.
+   */
+  @Test
+  void deveRemoverDadosDeExemploQuandoAplicarMigrations() {
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from produtor where documento in ('11111111111','22222222222')",
+                Integer.class))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from usuario where login in ('titular','suplente','consulta')",
+                Integer.class))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from cliente where nome in ('Mercadinho Central','Feira Livre do Município',"
+                    + "'CEASA Regional','Merenda Escolar Municipal','Cooperativa Agrícola Local','Comprador Avulso')",
+                Integer.class))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from valor_referencia_diaria where (valor = 70.00 and vigencia_inicio = '2025-01-01'"
+                    + " and vigencia_fim = '2025-12-31') or (valor = 80.00 and vigencia_inicio = '2026-01-01'"
+                    + " and vigencia_fim is null)",
+                Integer.class))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from emissao_relatorio where jsonb_typeof(conteudo->'produtor') = 'string'",
+                Integer.class))
+        .isZero();
+    assertThat(jdbc.queryForObject("select count(*) from categoria_despesa", Integer.class))
+        .isEqualTo(10);
+    assertThat(jdbc.queryForObject("select count(*) from cultura", Integer.class)).isEqualTo(9);
+    assertThat(
+            jdbc.queryForList(
+                "select tgenabled from pg_trigger where tgrelid = 'emissao_relatorio'::regclass"
+                    + " and not tgisinternal",
+                String.class))
+        .containsExactly("O", "O");
   }
 
   /** A03c: os gatilhos da RN34 em emissao_relatorio e a função que eles chamam. */

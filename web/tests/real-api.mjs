@@ -66,20 +66,6 @@ try {
     await new Promise((done) => setTimeout(done, 1000))
   }
   if (!ready) throw new Error('A API não ficou pronta em 90 segundos.')
-  // Temporário até a #152: a migration de dados iniciais grava emissões em formato antigo, que quebram a leitura de relatórios. Remover quando a correção entrar.
-  await exec('docker', [
-    'exec',
-    name,
-    'psql',
-    '-U',
-    'postgres',
-    '-d',
-    'postgres',
-    '-v',
-    'ON_ERROR_STOP=1',
-    '-c',
-    "BEGIN; ALTER TABLE emissao_relatorio DISABLE TRIGGER USER; DELETE FROM emissao_relatorio WHERE jsonb_typeof(conteudo->'produtor') = 'string'; ALTER TABLE emissao_relatorio ENABLE TRIGGER USER; COMMIT;",
-  ])
   const verifyEnv = {
     ...process.env,
     AGROGESTAO_API_REAL: 'true',

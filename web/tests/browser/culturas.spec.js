@@ -4,7 +4,7 @@ import { ConfiguracoesPage } from '../pages/ConfiguracoesPage.js'
 import { LoginPage } from '../pages/LoginPage.js'
 
 // C07 (#43) contra a API real (npm run test:api-real). Cada caso cria os próprios dados, com
-// nomes únicos; da massa só usa o admin e o login CONSULTA que a migration insere.
+// nomes únicos; da massa só usa o admin. O usuário CONSULTA é criado pelo admin no próprio caso.
 test.skip(
   !process.env.AGROGESTAO_API_REAL,
   'Executar com npm run test:api-real',
@@ -133,15 +133,17 @@ test('RN38: a unidade não muda depois de registrada a produção', async ({
 })
 
 test('CONSULTA vê as culturas sem cadastrar nem editar', async ({ page }) => {
-  // Login CONSULTA inserido pela migration de dados iniciais (senha de exemplo da massa).
-  const login = await page.request.post('/api/v1/auth/login', {
-    data: { login: 'consulta', senha: '12345678' },
-  })
-  test.skip(
-    login.status() !== 200,
-    'A massa da API não tem o login consulta; POST /usuarios ainda responde 501.',
-  )
-  const configuracoes = await telaDeCulturas(page, 'consulta', '12345678')
+  await comoAdmin(page)
+  const sufixo = unico()
+  const usuario = {
+    nome: `Consulta Fictícia Culturas ${sufixo}`,
+    login: `consulta-culturas-${sufixo}`,
+    senha: `senha-sintetica-${unico()}`,
+    perfil: 'CONSULTA',
+  }
+  await (await apiDaSessao(page)).post('/usuarios', usuario)
+  await new LoginPage(page).sair()
+  const configuracoes = await telaDeCulturas(page, usuario.login, usuario.senha)
   await expect(configuracoes.linhasDeCultura().first()).toBeVisible()
   await expect(configuracoes.acaoCadastrar()).toHaveCount(0)
   await expect(configuracoes.acoesDeEdicao()).toHaveCount(0)
