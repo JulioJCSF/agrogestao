@@ -35,4 +35,13 @@ public class Plantio extends EntidadeAuditada {
 
   @Column(name = "data_encerramento", nullable = true)
   private LocalDate dataEncerramento;
+
+  /**
+   * Ativo em algum dia do período, bordas inclusivas: começou até o fim e não terminou antes do
+   * início (decisão 2 de 03/11, A03a; também o painel, M07).
+   */
+  public boolean ativoNoPeriodo(LocalDate inicio, LocalDate fim) {
+    return !dataInicio.isAfter(fim)
+        && (dataEncerramento == null || !dataEncerramento.isBefore(inicio));
+  }
 }

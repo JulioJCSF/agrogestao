@@ -1,10 +1,17 @@
 import { banco, buscar, mensagensNaoEncontrado } from '../banco.js'
-import { escalar, hoje, idDoCaminho, numero, parametro } from '../respostas.js'
+import {
+  escalar,
+  hoje,
+  idDoCaminho,
+  numero,
+  parametro,
+  regraNegocio,
+  validacao,
+} from '../respostas.js'
 import { resultadoFixo } from './resultado.js'
 
-// O painel é exemplo fixo, coerente com a massa; o cálculo pertence à API.
-
-const PAINEL_FIXO = { receita: 485, custoDesembolso: 410, resultado: 75 }
+// O painel usa os resultados fixos de resultado.js; o cálculo pertence à API. Os totais são a
+// soma dos plantios devolvidos, como na API, para a tela não mostrar total que não bate.
 
 export default [
   [
@@ -42,11 +49,52 @@ export default [
   [
     'get',
     '/painel',
-    ({ url }) => ({
-      periodoInicio: parametro(url, 'periodoInicio', 'data') ?? '2026-01-01',
-      periodoFim: parametro(url, 'periodoFim', 'data') ?? hoje(),
-      ...PAINEL_FIXO,
-      plantios: banco.plantios.map(resultadoFixo),
-    }),
+    ({ url }) => {
+      const produtorId = parametro(url, 'produtorId', 'inteiro')
+      if (produtorId != null && produtorId <= 0)
+        throw validacao([
+          { campo: 'produtorId', mensagem: 'deve ser maior que 0' },
+        ])
+      // Decisão de 04/11: sem período, de 01/01 do ano corrente até hoje; só início, até hoje;
+      // só fim, desde 01/01 do ano do fim.
+      const periodoFim = parametro(url, 'periodoFim', 'data') ?? hoje()
+      const periodoInicio =
+        parametro(url, 'periodoInicio', 'data') ??
+        `${periodoFim.slice(0, 4)}-01-01`
+      if (periodoFim < periodoInicio)
+        throw regraNegocio('O fim do período não pode ser anterior ao início.')
+      if (produtorId != null)
+        buscar('produtores', produtorId, mensagensNaoEncontrado.produtores)
+      // Sem produtor, o painel geral; entram os plantios ativos em algum dia do período.
+      const plantios = banco.plantios
+        .filter(
+          (plantio) =>
+            (produtorId == null || plantio.produtorId === produtorId) &&
+            plantio.dataInicio <= periodoFim &&
+            (plantio.dataEncerramento == null ||
+              plantio.dataEncerramento >= periodoInicio),
+        )
+        .map((plantio) => ({
+          ...resultadoFixo(plantio),
+          periodoInicio,
+          periodoFim,
+        }))
+      const somar = (campo) =>
+        numero(
+          plantios.reduce(
+            (soma, plantio) => soma + escalar(plantio[campo], 2),
+            0n,
+          ),
+          2,
+        )
+      return {
+        periodoInicio,
+        periodoFim,
+        receita: somar('receita'),
+        custoDesembolso: somar('custoDesembolso'),
+        resultado: somar('resultado'),
+        plantios,
+      }
+    },
   ],
 ]

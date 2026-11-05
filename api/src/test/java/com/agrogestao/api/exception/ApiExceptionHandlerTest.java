@@ -190,4 +190,18 @@ class ApiExceptionHandlerTest {
     assertFormatoErro(
         resultado, 404, "NAO_ENCONTRADO", ApiExceptionHandler.MENSAGEM_NAO_ENCONTRADO);
   }
+
+  @Test
+  @WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
+  void deveRetornarErroPadraoQuandoModuloAindaForEsqueleto() throws Exception {
+    // O painel saiu do esqueleto na M07; nenhuma rota real responde 501, mas o formato continua.
+    mockMvc
+        .perform(get("/api/v1/teste-erro/nao-implementado"))
+        .andExpect(status().isNotImplemented())
+        .andExpect(jsonPath("$.status").value(501))
+        .andExpect(jsonPath("$.erro").value("NAO_IMPLEMENTADO"))
+        .andExpect(jsonPath("$.timestamp").isNotEmpty())
+        .andExpect(jsonPath("$.campos", hasSize(0)))
+        .andExpect(jsonPath("$.mensagem").isNotEmpty());
+  }
 }

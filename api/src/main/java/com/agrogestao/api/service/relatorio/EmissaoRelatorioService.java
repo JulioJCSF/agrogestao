@@ -24,10 +24,10 @@ import tools.jackson.databind.json.JsonMapper;
  * emissao_relatorio.conteudo}. Toda leitura desserializa o texto gravado e nunca reapura (RN34):
  * reemitir cria outra linha, e a anterior não muda.
  *
- * <p>Cada plantio vem de {@link ApuracaoResultadoService#apurar(Plantio, LocalDate, LocalDate)} com
- * o período da emissão, qualquer que seja o ciclo (RN24 e RN31); os totais são a soma dos plantios.
- * Decisões de 03/11: entram só os plantios ativos em algum dia do período, e a despesa estornada
- * fica fora da lista, como já fica fora do custo (RN19).
+ * <p>Os plantios vêm de {@link ApuracaoResultadoService#apurarVarios(List, LocalDate, LocalDate)},
+ * de uma vez, com o período da emissão, qualquer que seja o ciclo (RN24 e RN31); os totais são a
+ * soma dos plantios. Decisões de 03/11: entram só os plantios ativos em algum dia do período, e a
+ * despesa estornada fica fora da lista, como já fica fora do custo (RN19).
  */
 @Service
 @RequiredArgsConstructor
@@ -102,15 +102,12 @@ public class EmissaoRelatorioService {
   private ConteudoRelatorioResposta montar(Produtor produtor, LocalDate inicio, LocalDate fim) {
     Long produtorId = produtor.getId();
     // Decisão 2 de 03/11: ativo em algum dia do período, bordas inclusivas.
-    List<ResultadoPlantioResposta> apurados =
+    List<Plantio> ativos =
         plantios.buscarDoProdutorComCultura(produtorId).stream()
-            .filter(plantio -> !plantio.getDataInicio().isAfter(fim))
-            .filter(
-                plantio ->
-                    plantio.getDataEncerramento() == null
-                        || !plantio.getDataEncerramento().isBefore(inicio))
-            .map(plantio -> apuracao.apurar(plantio, inicio, fim))
+            .filter(plantio -> plantio.ativoNoPeriodo(inicio, fim))
             .toList();
+    List<ResultadoPlantioResposta> apurados =
+        List.copyOf(apuracao.apurarVarios(ativos, inicio, fim).values());
     BigDecimal receita = somar(apurados, ResultadoPlantioResposta::receita);
     BigDecimal custoDesembolso = somar(apurados, ResultadoPlantioResposta::custoDesembolso);
     return new ConteudoRelatorioResposta(

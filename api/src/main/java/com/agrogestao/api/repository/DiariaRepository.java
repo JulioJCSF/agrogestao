@@ -3,6 +3,7 @@ package com.agrogestao.api.repository;
 import com.agrogestao.api.model.Diaria;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.*;
@@ -14,8 +15,9 @@ import org.springframework.data.repository.query.Param;
 public interface DiariaRepository extends JpaRepository<Diaria, Long> {
   Page<Diaria> findByPlantioId(Long plantioId, Pageable pageable);
 
-  /** Todos os registros do plantio, sem paginação; o recorte por período é da apuração (A01). */
-  List<Diaria> findAllByPlantioId(Long plantioId);
+  /** Todos os registros dos plantios, sem paginação; o recorte por período é da apuração (A01). */
+  @Query("select d from Diaria d where d.plantio.id in :plantioIds")
+  List<Diaria> buscarDosPlantios(@Param("plantioIds") Collection<Long> plantioIds);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select d from Diaria d where d.id = :id")

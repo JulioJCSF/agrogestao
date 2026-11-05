@@ -90,6 +90,17 @@ class EmissaoRelatorioServiceTest {
             });
     when(apuracao.apurar(any(Plantio.class), any(), any()))
         .thenAnswer(inv -> apurado(inv.getArgument(0), "0.00", "0.00", "0.00"));
+    // A emissão apura em lote; cada plantio do lote responde pelo apurar avulso deste teste.
+    when(apuracao.apurarVarios(anyList(), any(), any()))
+        .thenAnswer(
+            inv -> {
+              Map<Long, ResultadoPlantioResposta> lote = new LinkedHashMap<>();
+              for (Plantio plantio : inv.<List<Plantio>>getArgument(0))
+                lote.put(
+                    plantio.getId(),
+                    apuracao.apurar(plantio, inv.getArgument(1), inv.getArgument(2)));
+              return lote;
+            });
   }
 
   Plantio plantio(TipoCiclo ciclo, String inicio, String encerramento) {

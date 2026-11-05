@@ -58,6 +58,11 @@ class ErroTesteController {
     throw new IllegalStateException("falha interna com.agrogestao.segredo");
   }
 
+  @GetMapping("/nao-implementado")
+  void naoImplementado() {
+    throw new ApiNaoImplementadaException();
+  }
+
   @GetMapping("/acesso-negado")
   void acessoNegado() {
     throw new AccessDeniedException("sem permissão");

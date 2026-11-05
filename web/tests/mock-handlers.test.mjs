@@ -693,6 +693,92 @@ describe('saldo do plantio (M05)', () => {
   })
 })
 
+describe('painel (M07)', () => {
+  const ids = (resposta) => resposta.corpo.plantios.map((p) => p.plantioId)
+  const totais = ({ corpo: { receita, custoDesembolso, resultado } }) => ({
+    receita,
+    custoDesembolso,
+    resultado,
+  })
+
+  test('filtra pelo produtor e soma os plantios devolvidos', async () => {
+    const geral = await operador(
+      'GET',
+      '/painel?periodoInicio=2026-01-01&periodoFim=2026-06-30',
+    )
+    assert.equal(geral.status, 200)
+    assert.deepEqual(ids(geral), [1, 2, 3])
+    assert.deepEqual(totais(geral), {
+      receita: 485,
+      custoDesembolso: 410,
+      resultado: 75,
+    })
+    assert.ok(
+      geral.corpo.plantios.every(
+        (p) =>
+          p.periodoInicio === '2026-01-01' && p.periodoFim === '2026-06-30',
+      ),
+    )
+
+    const doProdutor = await operador(
+      'GET',
+      '/painel?periodoInicio=2026-01-01&periodoFim=2026-06-30&produtorId=1',
+    )
+    assert.deepEqual(ids(doProdutor), [1, 2])
+    assert.deepEqual(totais(doProdutor), {
+      receita: 125,
+      custoDesembolso: 330,
+      resultado: -205,
+    })
+
+    // Só os plantios ativos no período: o 3 encerrou em 30/06.
+    const segundoSemestre = await operador(
+      'GET',
+      '/painel?periodoInicio=2026-07-01&periodoFim=2026-12-31&produtorId=2',
+    )
+    assert.deepEqual(ids(segundoSemestre), [])
+    assert.deepEqual(totais(segundoSemestre), {
+      receita: 0,
+      custoDesembolso: 0,
+      resultado: 0,
+    })
+  })
+
+  test('completa o período padrão', async () => {
+    const hoje = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/Fortaleza',
+    })
+    const semPeriodo = await operador('GET', '/painel')
+    assert.equal(semPeriodo.corpo.periodoInicio, `${hoje.slice(0, 4)}-01-01`)
+    assert.equal(semPeriodo.corpo.periodoFim, hoje)
+    const soInicio = await operador('GET', '/painel?periodoInicio=2026-06-01')
+    assert.equal(soInicio.corpo.periodoFim, hoje)
+    const soFim = await operador('GET', '/painel?periodoFim=2025-08-31')
+    assert.equal(soFim.corpo.periodoInicio, '2025-01-01')
+    assert.deepEqual(ids(soFim), [])
+  })
+
+  test('responde 422, 404 e 400 como a API', async () => {
+    regra(
+      await operador(
+        'GET',
+        '/painel?periodoInicio=2026-06-30&periodoFim=2026-01-01',
+      ),
+      'O fim do período não pode ser anterior ao início.',
+      [],
+    )
+    erroEsperado(
+      await operador('GET', '/painel?produtorId=99'),
+      404,
+      'NAO_ENCONTRADO',
+      'Produtor não encontrado.',
+    )
+    validacao(await operador('GET', '/painel?produtorId=0'), [
+      { campo: 'produtorId', mensagem: 'deve ser maior que 0' },
+    ])
+  })
+})
+
 test('reiniciar() descarta o que foi gravado', async () => {
   await operador('POST', '/culturas', {
     nome: 'Cultura Fictícia Temporária',

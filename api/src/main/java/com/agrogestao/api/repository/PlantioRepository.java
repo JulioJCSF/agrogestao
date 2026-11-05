@@ -34,4 +34,8 @@ public interface PlantioRepository
       order by p.id
       """)
   List<Plantio> buscarDoProdutorComCultura(@Param("produtorId") Long produtorId);
+
+  /** Todos os plantios, em ordem de id, com cultura e propriedade: o painel geral (M07). */
+  @Query("select p from Plantio p join fetch p.cultura join fetch p.propriedade order by p.id")
+  List<Plantio> buscarTodosComCultura();
 }
