@@ -1,7 +1,7 @@
 package com.agrogestao.api.service.apuracao;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.*;
 
 import com.agrogestao.api.dto.ResultadoPlantioResposta;
@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
@@ -56,14 +57,19 @@ class ApuracaoResultadoServiceTest {
     p3 = plantio(3L, TipoCiclo.CURTO, null);
     pl = plantio(4L, TipoCiclo.LONGO, LocalDate.of(2026, 7, 31));
     pa = plantio(5L, TipoCiclo.LONGO, null);
-    when(rateios.buscarDoPlantioComDespesa(anyLong()))
-        .thenAnswer(inv -> rateiosDoPlantio.getOrDefault(inv.getArgument(0), List.of()));
-    when(diarias.findAllByPlantioId(anyLong()))
-        .thenAnswer(inv -> diariasDoPlantio.getOrDefault(inv.getArgument(0), List.of()));
-    when(producoes.findAllByPlantioId(anyLong()))
-        .thenAnswer(inv -> producoesDoPlantio.getOrDefault(inv.getArgument(0), List.of()));
-    when(itensVenda.buscarDoPlantioComVenda(anyLong()))
-        .thenAnswer(inv -> itensDoPlantio.getOrDefault(inv.getArgument(0), List.of()));
+    when(rateios.buscarDosPlantiosComDespesa(anyCollection()))
+        .thenAnswer(inv -> dosPlantios(rateiosDoPlantio, inv.getArgument(0)));
+    when(diarias.buscarDosPlantios(anyCollection()))
+        .thenAnswer(inv -> dosPlantios(diariasDoPlantio, inv.getArgument(0)));
+    when(producoes.buscarDosPlantios(anyCollection()))
+        .thenAnswer(inv -> dosPlantios(producoesDoPlantio, inv.getArgument(0)));
+    when(itensVenda.buscarDosPlantiosComVenda(anyCollection()))
+        .thenAnswer(inv -> dosPlantios(itensDoPlantio, inv.getArgument(0)));
+  }
+
+  /** O que a consulta em lote devolve: os registros de todos os plantios pedidos, misturados. */
+  static <T> List<T> dosPlantios(Map<Long, List<T>> porPlantio, Collection<Long> ids) {
+    return ids.stream().flatMap(id -> porPlantio.getOrDefault(id, List.of()).stream()).toList();
   }
 
   Plantio plantio(Long id, TipoCiclo ciclo, LocalDate encerramento) {
@@ -411,5 +417,84 @@ class ApuracaoResultadoServiceTest {
     despesaDe(p1, "2026-03-10", "7.00");
     var resultado = service.apurar(p1, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 3, 31));
     assertPeriodo(resultado, TipoCiclo.CURTO, "2026-02-01", "2026-03-31", "12.00");
+  }
+
+  /** Massa base da Q00d nos cinco plantios: rateio, estorno, diárias, produção e venda. */
+  void massaCompleta() {
+    Despesa d1 = despesa("2026-03-10", "100.00", false);
+    ratear(d1, p1, "0.333333", "33.34");
+    ratear(d1, p2, "0.333333", "33.33");
+    ratear(d1, p3, "0.333333", "33.33");
+    despesaDe(p1, "2026-03-01", "57.89");
+    despesaDe(p1, "2026-02-28", "1000.00");
+    ratear(despesa("2026-03-15", "500.00", true), p1, "1.000000", "500.00");
+    Diaria paga = diaria(p2, NaturezaDiaria.PAGA, "2.00", "90.00", "2026-03-12");
+    despesaDe(p2, "2026-03-12", "180.00").setDiaria(paga);
+    diaria(p2, NaturezaDiaria.FAMILIAR, "1.50", "80.00", "2026-03-12");
+    diaria(p3, NaturezaDiaria.FAMILIAR, "0.333", "80.00", "2026-04-02");
+    producao(p1, "250.500", "2026-03-20");
+    producao(p3, "30.000", "2026-04-10");
+    Venda v1 = venda("2026-03-20", "600.00");
+    item(v1, p1, "100.000", "4.50", "450.00");
+    item(v1, p2, "50.000", "3.00", "150.00");
+    item(venda("2026-04-01", "45.00"), p3, "10.000", "4.50", "45.00");
+    despesaDe(pl, "2026-03-10", "230.00");
+    despesaDe(pl, "2026-08-10", "70.00");
+    diaria(pl, NaturezaDiaria.FAMILIAR, "1.00", "80.00", "2026-07-31");
+    item(venda("2026-07-31", "900.00"), pl, "200.000", "4.50", "900.00");
+    despesaDe(pa, "2026-10-11", "25.00");
+    producao(pa, "12.000", "2026-10-11");
+  }
+
+  @Test
+  void deveDarOMesmoResultadoQuandoApurarEmLoteOuUmPorUm() {
+    massaCompleta();
+    List<Plantio> todos = List.of(p1, p2, p3, pl, pa);
+    for (LocalDate[] periodo :
+        new LocalDate[][] {
+          {LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)},
+          {LocalDate.of(2026, 2, 1), LocalDate.of(2026, 10, 11)}
+        }) {
+      Map<Long, ResultadoPlantioResposta> lote =
+          service.apurarVarios(todos, periodo[0], periodo[1]);
+      assertThat(lote.keySet()).containsExactly(1L, 2L, 3L, 4L, 5L);
+      for (Plantio plantio : todos)
+        assertThat(lote.get(plantio.getId()))
+            .usingRecursiveComparison()
+            .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+            .isEqualTo(service.apurar(plantio, periodo[0], periodo[1]));
+    }
+    // Uma consulta por fonte para os cinco plantios, mais uma por fonte em cada apuração avulsa.
+    verify(rateios, times(2 + 10)).buscarDosPlantiosComDespesa(anyCollection());
+  }
+
+  @Test
+  void deveDevolverMapaVazioSemConsultarQuandoListaForVazia() {
+    assertThat(service.apurarVarios(List.of(), LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
+        .isEmpty();
+    verifyNoInteractions(rateios, diarias, producoes, itensVenda);
+  }
+
+  @Test
+  void deveConsultarEmBlocosDeMilQuandoHouverMaisDeMilPlantios() {
+    List<Plantio> muitos = new ArrayList<>();
+    for (long id = 1; id <= 1001; id++) {
+      Plantio plantio = new Plantio();
+      ReflectionTestUtils.setField(plantio, "id", id);
+      plantio.setCultura(milho);
+      plantio.setPropriedade(sitio);
+      plantio.setTipoCiclo(TipoCiclo.CURTO);
+      muitos.add(plantio);
+    }
+    var apurados =
+        service.apurarVarios(muitos, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+    assertThat(apurados).hasSize(1001);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Collection<Long>> blocos = ArgumentCaptor.forClass(Collection.class);
+    verify(rateios, times(2)).buscarDosPlantiosComDespesa(blocos.capture());
+    assertThat(blocos.getAllValues()).extracting(Collection::size).containsExactly(1000, 1);
+    verify(diarias, times(2)).buscarDosPlantios(anyCollection());
+    verify(producoes, times(2)).buscarDosPlantios(anyCollection());
+    verify(itensVenda, times(2)).buscarDosPlantiosComVenda(anyCollection());
   }
 }

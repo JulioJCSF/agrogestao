@@ -240,7 +240,7 @@ Essa paginação e as assinaturas compõem a proposta técnica da F13; revisão 
 | Resultado | GET /plantios/{id}/resultado?mes=AAAA-MM |
 | Relatórios | POST /relatorios; GET /produtores/{produtorId}/relatorios; GET /relatorios/{id} |
 | Usuários | GET/POST /usuarios; PUT /usuarios/{id}; PUT /usuarios/{id}/senha |
-| Complementos | GET /plantios/{id}/saldo; GET /painel |
+| Complementos | GET /plantios/{id}/saldo; GET /painel?produtorId&periodoInicio&periodoFim. O produtorId é obrigatório; sem período, vai de 01/01 do ano corrente até hoje (America/Fortaleza). Os totais são a soma dos plantios do produtor ativos no período, cada um apurado como no relatório |
 Todos os caminhos da tabela têm prefixo `/api/v1`. Os DTOs e exemplos concretos são gerados do código no Swagger; ele é a referência completa de campos e parâmetros.
 
 A emissão não aceita conteúdo apurado do cliente. O conteúdo de resposta inclui produtor, propriedades, resultados por plantio, despesas, diárias e ambas as ressalvas. O histórico lê a emissão gravada. POST de domínio responde 201 com `Location`, inclusive encerramento e estorno; o POST de autenticação responde 200. Encerramento e emissão usam POST; estorno preserva o registro. O resultado de cada plantio no conteúdo gravado inclui `culturaNome` e `propriedadeNome`, preservados como snapshot junto aos valores apurados (RN31 e RN34). Essas assinaturas não antecipam as decisões de negócio ainda pendentes em A01/A03a/L09b (período de safra, efeito do estorno e venda sem produção).

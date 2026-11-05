@@ -224,20 +224,6 @@ class ContratoIT extends IntegracaoTest {
 
   @Test
   @WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
-  void deveRetornarErroPadraoQuandoModuloAindaForEsqueleto() throws Exception {
-    mvc.perform(get("/api/v1/painel"))
-        .andExpect(status().isNotImplemented())
-        .andExpect(jsonPath("$.status").value(501))
-        .andExpect(jsonPath("$.erro").value("NAO_IMPLEMENTADO"))
-        .andExpect(jsonPath("$.timestamp").isNotEmpty())
-        .andExpect(jsonPath("$.campos", hasSize(0)))
-        .andExpect(jsonPath("$.mensagem").isNotEmpty());
-    // O estorno saiu do esqueleto na A03b; o painel continua sendo o exemplo de 501.
-    mvc.perform(get("/api/v1/painel")).andExpect(status().isNotImplemented());
-  }
-
-  @Test
-  @WithMockUser(username = UsuariosTeste.LANCAMENTO, roles = "LANCAMENTO")
   void deveValidarCamposAninhadosQuandoContratoDeVendaForInvalido() throws Exception {
     mvc.perform(
             post("/api/v1/vendas")

@@ -18,8 +18,9 @@ public interface ProducaoRepository extends JpaRepository<Producao, Long> {
 
   Page<Producao> findByPlantioId(Long plantioId, Pageable pageable);
 
-  /** Todos os registros do plantio, sem paginação; o recorte por período é da apuração (A01). */
-  List<Producao> findAllByPlantioId(Long plantioId);
+  /** Todos os registros dos plantios, sem paginação; o recorte por período é da apuração (A01). */
+  @Query("select p from Producao p where p.plantio.id in :plantioIds")
+  List<Producao> buscarDosPlantios(@Param("plantioIds") Collection<Long> plantioIds);
 
   boolean existsByPlantioPropriedadeProdutorId(Long produtorId);
 
