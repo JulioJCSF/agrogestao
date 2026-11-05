@@ -20,9 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
  * como no relatório (A03a), e os totais são a soma dos plantios. Quantidades não são somadas:
  * cultura diferente tem unidade diferente; elas ficam por plantio.
  *
- * <p>Decisões de 04/11: sem {@code produtorId}, o painel é o geral, com todos os plantios. Sem
- * período, vai de 01/01 do ano corrente até hoje, em Fortaleza; só com início, vai até hoje; só com
- * fim, começa em 01/01 do ano do fim. Painel é só leitura e não trava o produtor.
+ * <p>O painel é sempre de um produtor; o painel consolidado do sindicato está fora do escopo
+ * (requisitos, seção 12). Decisão de 04/11: sem período, vai de 01/01 do ano corrente até hoje, em
+ * Fortaleza; só com início, vai até hoje; só com fim, começa em 01/01 do ano do fim. Painel é só
+ * leitura e não trava o produtor.
  */
 @Service
 @RequiredArgsConstructor
@@ -42,14 +43,13 @@ public class PainelService {
     LocalDate fim = periodoFim != null ? periodoFim : LocalDate.now(relogio);
     LocalDate inicio = periodoInicio != null ? periodoInicio : fim.withDayOfYear(1);
     if (fim.isBefore(inicio)) throw new RegraNegocioException(PERIODO_INVERTIDO);
-    if (produtorId != null && !produtores.existsById(produtorId))
+    if (!produtores.existsById(produtorId))
       throw new RecursoNaoEncontradoException(PRODUTOR_NAO_ENCONTRADO);
 
     List<Plantio> ativos =
-        (produtorId == null
-                ? plantios.buscarTodosComCultura()
-                : plantios.buscarDoProdutorComCultura(produtorId))
-            .stream().filter(plantio -> plantio.ativoNoPeriodo(inicio, fim)).toList();
+        plantios.buscarDoProdutorComCultura(produtorId).stream()
+            .filter(plantio -> plantio.ativoNoPeriodo(inicio, fim))
+            .toList();
     List<ResultadoPlantioResposta> apurados =
         List.copyOf(apuracao.apurarVarios(ativos, inicio, fim).values());
     BigDecimal receita = somar(apurados, ResultadoPlantioResposta::receita);

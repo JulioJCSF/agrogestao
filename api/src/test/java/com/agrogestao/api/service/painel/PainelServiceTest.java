@@ -18,7 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * M07 com repositórios e apuração mockados: período padrão (decisão 2 de 04/11), plantios ativos no
- * período (as bordas da A03a), produtor opcional e totais como soma dos plantios.
+ * período (as bordas da A03a), produtor obrigatório e totais como soma dos plantios.
  */
 class PainelServiceTest {
   static final ZoneId FORTALEZA = ZoneId.of("America/Fortaleza");
@@ -34,7 +34,6 @@ class PainelServiceTest {
 
   Cultura milho = new Cultura();
   List<Plantio> doProdutor = new ArrayList<>();
-  List<Plantio> todos = new ArrayList<>();
   Map<Long, String[]> valores = new HashMap<>();
   long proximoId = 100;
 
@@ -48,7 +47,6 @@ class PainelServiceTest {
     milho.setUnidadeMedida("kg");
     when(produtores.existsById(1L)).thenReturn(true);
     when(plantios.buscarDoProdutorComCultura(1L)).thenReturn(doProdutor);
-    when(plantios.buscarTodosComCultura()).thenReturn(todos);
     when(apuracao.apurarVarios(anyList(), any(), any()))
         .thenAnswer(
             inv -> {
@@ -62,15 +60,14 @@ class PainelServiceTest {
             });
   }
 
-  Plantio plantio(boolean doProdutor1, String inicio, String encerramento) {
+  Plantio plantio(String inicio, String encerramento) {
     Plantio plantio = new Plantio();
     ReflectionTestUtils.setField(plantio, "id", proximoId++);
     plantio.setCultura(milho);
     plantio.setTipoCiclo(TipoCiclo.LONGO);
     plantio.setDataInicio(LocalDate.parse(inicio));
     plantio.setDataEncerramento(encerramento == null ? null : LocalDate.parse(encerramento));
-    if (doProdutor1) doProdutor.add(plantio);
-    todos.add(plantio);
+    doProdutor.add(plantio);
     return plantio;
   }
 
@@ -129,7 +126,7 @@ class PainelServiceTest {
         .isInstanceOf(RegraNegocioException.class)
         .hasMessage("O fim do período não pode ser anterior ao início.");
     // Só início, depois de hoje: o período padrão fica invertido.
-    assertThatThrownBy(() -> service.consultar(LocalDate.parse("2026-11-05"), null, null))
+    assertThatThrownBy(() -> service.consultar(LocalDate.parse("2026-11-05"), null, 1L))
         .isInstanceOf(RegraNegocioException.class);
     verifyNoInteractions(plantios, apuracao);
   }
@@ -144,11 +141,11 @@ class PainelServiceTest {
 
   @Test
   void deveIncluirSoPlantiosAtivosNoPeriodoQuandoConsultar() {
-    Plantio aberto = plantio(true, "2026-02-01", null);
-    Plantio encerradoNoInicio = plantio(true, "2025-08-01", "2026-01-01");
-    Plantio comecaNoFim = plantio(true, "2026-06-30", null);
-    plantio(true, "2026-07-01", null);
-    plantio(true, "2025-08-01", "2025-12-31");
+    Plantio aberto = plantio("2026-02-01", null);
+    Plantio encerradoNoInicio = plantio("2025-08-01", "2026-01-01");
+    Plantio comecaNoFim = plantio("2026-06-30", null);
+    plantio("2026-07-01", null);
+    plantio("2025-08-01", "2025-12-31");
 
     assertThat(service.consultar(INICIO, FIM, 1L).plantios())
         .extracting(ResultadoPlantioResposta::plantioId)
@@ -158,8 +155,8 @@ class PainelServiceTest {
 
   @Test
   void deveSomarOsPlantiosQuandoMontarOsTotais() {
-    Plantio milhoCt050 = plantio(true, "2026-02-01", null);
-    Plantio hortalica = plantio(true, "2026-02-01", null);
+    Plantio milhoCt050 = plantio("2026-02-01", null);
+    Plantio hortalica = plantio("2026-02-01", null);
     valores.put(milhoCt050.getId(), new String[] {"900.00", "696.67"});
     valores.put(hortalica.getId(), new String[] {"90.00", "33.33"});
 
@@ -180,21 +177,5 @@ class PainelServiceTest {
     assertThat(painel.receita()).isEqualTo(new BigDecimal("0.00"));
     assertThat(painel.custoDesembolso()).isEqualTo(new BigDecimal("0.00"));
     assertThat(painel.resultado()).isEqualTo(new BigDecimal("0.00"));
-  }
-
-  @Test
-  void deveSomarTodosOsPlantiosQuandoNaoHouverProdutor() {
-    Plantio deA = plantio(true, "2026-02-01", null);
-    Plantio deB = plantio(false, "2026-03-01", null);
-    valores.put(deA.getId(), new String[] {"100.00", "40.00"});
-    valores.put(deB.getId(), new String[] {"50.00", "80.00"});
-
-    PainelResposta painel = service.consultar(INICIO, FIM, null);
-    assertThat(painel.plantios())
-        .extracting(ResultadoPlantioResposta::plantioId)
-        .containsExactly(deA.getId(), deB.getId());
-    assertThat(painel.resultado()).isEqualTo(new BigDecimal("30.00"));
-    verify(plantios, never()).buscarDoProdutorComCultura(anyLong());
-    verifyNoInteractions(produtores);
   }
 }

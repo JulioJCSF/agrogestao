@@ -173,7 +173,7 @@ RF49 é o que sustenta a decisão de o que plantar — o uso real da informaçã
 
 Decisões de 04/11/2026, na implementação da M07 (#81):
 
-- O painel aceita produtor opcional. Com produtor, é o painel dele (uso principal da RF49); sem produtor, é o geral do sindicato.
+- O painel é sempre de um produtor (produtorId obrigatório), para comparar os plantios dele (RF49). O painel consolidado do sindicato continua fora do escopo (seção 12); decisão revista em 05/11/2026.
 - Sem período informado, o painel vai de 01/01 do ano corrente até hoje, no fuso de Fortaleza. Só com início, vai até hoje; só com fim, começa em 01/01 do ano do fim.
 
 ---

@@ -10,8 +10,9 @@ import {
 } from '../respostas.js'
 import { resultadoFixo } from './resultado.js'
 
-// O painel usa os resultados fixos de resultado.js; o cálculo pertence à API. Os totais são a
-// soma dos plantios devolvidos, como na API, para a tela não mostrar total que não bate.
+// O painel é sempre de um produtor e usa os resultados fixos de resultado.js; o cálculo pertence à
+// API. Os totais são a soma dos plantios devolvidos, como na API, para a tela não mostrar total que
+// não bate.
 
 export default [
   [
@@ -51,7 +52,11 @@ export default [
     '/painel',
     ({ url }) => {
       const produtorId = parametro(url, 'produtorId', 'inteiro')
-      if (produtorId != null && produtorId <= 0)
+      if (produtorId == null)
+        throw validacao([
+          { campo: 'produtorId', mensagem: 'não deve ser nulo' },
+        ])
+      if (produtorId <= 0)
         throw validacao([
           { campo: 'produtorId', mensagem: 'deve ser maior que 0' },
         ])
@@ -63,13 +68,12 @@ export default [
         `${periodoFim.slice(0, 4)}-01-01`
       if (periodoFim < periodoInicio)
         throw regraNegocio('O fim do período não pode ser anterior ao início.')
-      if (produtorId != null)
-        buscar('produtores', produtorId, mensagensNaoEncontrado.produtores)
-      // Sem produtor, o painel geral; entram os plantios ativos em algum dia do período.
+      buscar('produtores', produtorId, mensagensNaoEncontrado.produtores)
+      // Entram os plantios do produtor ativos em algum dia do período.
       const plantios = banco.plantios
         .filter(
           (plantio) =>
-            (produtorId == null || plantio.produtorId === produtorId) &&
+            plantio.produtorId === produtorId &&
             plantio.dataInicio <= periodoFim &&
             (plantio.dataEncerramento == null ||
               plantio.dataEncerramento >= periodoInicio),

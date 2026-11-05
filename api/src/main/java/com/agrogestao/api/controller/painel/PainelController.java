@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.*;
 import java.time.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -38,9 +38,9 @@ public class PainelController {
 
   @GetMapping("/api/v1/painel")
   @Operation(
-      summary = "Painel por período, do produtor ou geral",
+      summary = "Painel do produtor por período",
       description =
-          "Sem produtorId, soma todos os plantios. Sem período, de 01/01 do ano corrente até hoje;"
+          "O painel é sempre de um produtor. Sem período, de 01/01 do ano corrente até hoje;"
               + " só início, até hoje; só fim, desde 01/01 do ano do fim. Entram os plantios ativos"
               + " em algum dia do período, cada um apurado no período informado; os totais são a"
               + " soma dos plantios.")
@@ -48,7 +48,7 @@ public class PainelController {
   public PainelResposta consultar(
       @RequestParam(required = false) LocalDate periodoInicio,
       @RequestParam(required = false) LocalDate periodoFim,
-      @RequestParam(required = false) @Positive Long produtorId) {
+      @RequestParam(required = false) @NotNull @Positive Long produtorId) {
     return service.consultar(periodoInicio, periodoFim, produtorId);
   }
 }

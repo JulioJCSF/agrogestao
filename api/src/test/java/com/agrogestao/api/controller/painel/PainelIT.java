@@ -26,13 +26,11 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 /**
  * M07 contra o banco, pela API com token real: os números do CT050 iguais aos do relatório, o
- * painel do produtor e o geral, o número de consultas que não cresce com os plantios e os erros.
+ * painel de cada produtor, o número de consultas que não cresce com os plantios e os erros.
  * Produtor, propriedade e plantio entram por SQL, como no {@code EmissaoRelatorioIT}; despesa,
  * diária, produção e venda pelas APIs.
  *
- * <p>O painel geral soma todos os plantios do banco, inclusive os de outros testes e os dados
- * iniciais; por isso, sem produtor, os casos conferem só a presença dos plantios daqui e que o
- * total é a soma da lista. Sem {@code @Transactional}: limpeza no {@code @AfterEach}.
+ * <p>Sem {@code @Transactional}: limpeza no {@code @AfterEach}.
  */
 class PainelIT extends IntegracaoTest {
   static final Instant AGORA = Instant.parse("2026-11-03T15:00:00Z");
@@ -272,10 +270,10 @@ class PainelIT extends IntegracaoTest {
             .isEqualTo(doRelatorio.get(i).get(campo).toString());
   }
 
-  // --- produtor e geral -------------------------------------------------------------------------
+  // --- dois produtores --------------------------------------------------------------------------
 
   @Test
-  void deveSepararOProdutorEJuntarTodosQuandoHouverDoisProdutores() throws Exception {
+  void deveTrazerSoOsPlantiosDoProdutorQuandoHouverDoisProdutores() throws Exception {
     Long outro = produtor("Produtor Teste Painel B", "99900001400", "2026-01-15");
     Long deA = plantio(produtor, milho, "LONGO", "1.000");
     Long deB = plantio(outro, hortalica, "CURTO", "1.000");
@@ -293,13 +291,11 @@ class PainelIT extends IntegracaoTest {
         .containsExactly(deB.intValue());
     assertThat(dinheiro(soB, "$.resultado")).isEqualByComparingTo("-80.00");
 
-    String geral = painelComSucesso(SEMESTRE);
-    List<Integer> todos = JsonPath.read(geral, "$.plantios[*].plantioId");
-    assertThat(todos).contains(deA.intValue(), deB.intValue()).isSorted();
-    for (String campo : List.of("receita", "custoDesembolso", "resultado"))
-      assertThat(dinheiro(geral, "$." + campo))
-          .as(campo)
-          .isEqualByComparingTo(somaDaLista(geral, campo));
+    for (String painel : List.of(soA, soB))
+      for (String campo : List.of("receita", "custoDesembolso", "resultado"))
+        assertThat(dinheiro(painel, "$." + campo))
+            .as(campo)
+            .isEqualByComparingTo(somaDaLista(painel, campo));
   }
 
   // --- N+1 --------------------------------------------------------------------------------------
@@ -354,7 +350,7 @@ class PainelIT extends IntegracaoTest {
 
   @Test
   void deveRecusarQuandoPeriodoForInvertido() throws Exception {
-    painel(lancamento, "periodoInicio=2026-06-30&periodoFim=2026-01-01")
+    painel(lancamento, "periodoInicio=2026-06-30&periodoFim=2026-01-01&produtorId=" + produtor)
         .andExpect(status().isUnprocessableContent())
         .andExpect(
             jsonPath("$.mensagem").value("O fim do período não pode ser anterior ao início."));
@@ -365,6 +361,15 @@ class PainelIT extends IntegracaoTest {
     painel(lancamento, SEMESTRE + "&produtorId=999999999")
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.mensagem").value("Produtor não encontrado."));
+  }
+
+  @Test
+  void deveRecusarComFormatoInvalidoQuandoFaltarProdutor() throws Exception {
+    painel(lancamento, SEMESTRE)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.erro").value("VALIDACAO"))
+        .andExpect(jsonPath("$.campos[0].campo").value("produtorId"))
+        .andExpect(jsonPath("$.campos[0].mensagem").value("não deve ser nulo"));
   }
 
   @Test
