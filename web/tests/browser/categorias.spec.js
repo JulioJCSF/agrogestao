@@ -4,8 +4,8 @@ import { ConfiguracoesPage } from '../pages/ConfiguracoesPage.js'
 import { LoginPage } from '../pages/LoginPage.js'
 
 // L12 (#53) contra a API real (npm run test:api-real). Cada caso cria os próprios dados, com
-// nomes únicos; da massa só usa o admin, o login CONSULTA e a categoria de sistema "Diária",
-// que a migration insere (RN16).
+// nomes únicos; da massa só usa o admin e a categoria de sistema "Diária", que a migration
+// insere (RN16). O usuário CONSULTA é criado pelo admin no próprio caso.
 test.skip(
   !process.env.AGROGESTAO_API_REAL,
   'Executar com npm run test:api-real',
@@ -176,15 +176,21 @@ test('categoria usada em despesa não é excluída', async ({ page }) => {
 test('CONSULTA vê as categorias sem cadastrar, editar nem excluir', async ({
   page,
 }) => {
-  // Login CONSULTA inserido pela migration de dados iniciais (senha de exemplo da massa).
-  const login = await page.request.post('/api/v1/auth/login', {
-    data: { login: 'consulta', senha: '12345678' },
-  })
-  test.skip(
-    login.status() !== 200,
-    'A massa da API não tem o login consulta; POST /usuarios ainda responde 501.',
+  await comoAdmin(page)
+  const sufixo = unico()
+  const usuario = {
+    nome: `Consulta Fictícia Categorias ${sufixo}`,
+    login: `consulta-categorias-${sufixo}`,
+    senha: `senha-sintetica-${unico()}`,
+    perfil: 'CONSULTA',
+  }
+  await (await apiDaSessao(page)).post('/usuarios', usuario)
+  await new LoginPage(page).sair()
+  const configuracoes = await telaDeCategorias(
+    page,
+    usuario.login,
+    usuario.senha,
   )
-  const configuracoes = await telaDeCategorias(page, 'consulta', '12345678')
   const id = await configuracoes.idDaCategoria('Diária')
   await expect(configuracoes.linhaCategoria(id)).toContainText('Sistema')
   await expect(configuracoes.acaoCadastrar()).toHaveCount(0)

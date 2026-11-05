@@ -246,9 +246,11 @@ O token vale `JWT_EXPIRACAO_MINUTOS` (60 por padrão). Quando expirar, a API res
 
 A partir de `api/`: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` (PowerShell: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"`).
 
-O perfil `dev` carrega `db/dev/dados-sinteticos.sql` depois das migrations, com um inicializador idempotente: três produtores claramente fictícios, CPFs gerados com dígitos verificadores, propriedades e plantios do catálogo. O perfil padrão e os testes comuns não executam esse inicializador.
+O perfil `dev` carrega `db/dev/dados-sinteticos.sql` depois das migrations, com um inicializador idempotente: três produtores claramente fictícios, CPFs gerados com dígitos verificadores, propriedades e plantios do catálogo. O produtor fictício 1 tem consentimento e lançamentos (despesa, diária familiar, diária paga, produção e venda), com uma referência de diária e dois clientes fictícios; o 2 fica sem consentimento, para exercitar a RN37. A massa não traz emissão de relatório: emita pela tela ou pela API. O perfil padrão e os testes comuns não executam esse inicializador.
 
-**Limitação da F12 (#86):** a migration antiga `V20261005_1020` já contém exemplos, usuários de exemplo e referências em todos os perfis. Ela foi preservada conforme orientação desta entrega. A massa adicional fica em `dev`; a separação integral da carga antiga ainda exige decisão, e #86 permanece aberta. Não há nova migration nem alteração de checksum.
+Usuários de dev: com `DEV_SENHA_USUARIOS` preenchida no `.env` (mínimo de 8 caracteres), o perfil `dev` cria `operador.dev` (LANCAMENTO) e `consulta.dev` (CONSULTA) com essa senha. Vazia, não cria e avisa no log. Se o usuário já existe, fica como está.
+
+Os dados de exemplo da carga inicial (usuários `titular`, `suplente` e `consulta`, produtores, lançamentos, clientes, referências e a emissão antiga) saíram com a migration `V20261105_1000` (E00, #152). Num banco de dev antigo, eles somem; o que estiver em uso fica, e os usuários de exemplo em uso ficam inativos, sem a senha antiga.
 
 Para zerar somente o banco local de desenvolvimento, pare a API e execute `docker compose down -v` na raiz, depois `docker compose up -d db`. O comando apaga o volume local e todos os registros nele.
 

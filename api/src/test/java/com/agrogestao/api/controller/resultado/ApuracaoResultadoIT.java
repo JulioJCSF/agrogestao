@@ -24,8 +24,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * do login (F04b). Sem {@code @Transactional}: limpeza no {@code @AfterEach}.
  *
  * <p>Datas já passadas e plantios longos encerrados, para não depender do dia em que roda. A diária
- * familiar usa 2024, porque a migration de dados iniciais já tem referência vigente de 2026 em
- * diante e outro *IT pode tê-la apagado; em 2024 a referência é criada aqui.
+ * familiar usa 2024, escolhido quando a migration de dados iniciais tinha referência de 2026 em
+ * diante (removida na E00); em 2024 nenhum outro *IT cria referência, e ela é criada aqui.
  */
 class ApuracaoResultadoIT extends IntegracaoTest {
   @Autowired MockMvc mvc;

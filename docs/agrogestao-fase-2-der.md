@@ -393,6 +393,7 @@ Dependência de chave estrangeira impõe a sequência. `despesa` referencia `dia
 | 9 | `V<ts>__cria_cliente_venda.sql` | cliente, venda, item_venda |
 | 10 | `V<ts>__cria_emissao_relatorio.sql` | emissao_relatorio |
 | 11 | `V<ts>__insere_dados_iniciais.sql` | usuário administrador inicial; categoria "Diária" com `sistema = TRUE`; catálogo inicial de culturas |
+| 14 | `V20261105_1000__remove_dados_de_exemplo.sql` | remove os dados de exemplo da carga inicial; desliga os gatilhos da emissão só no script |
 
 `<ts>` é o timestamp no formato `AAAAMMDD_HHMM`, conforme a seção 2.5 dos padrões técnicos. Numeração sequencial está vedada por causa de colisão em merge.
 

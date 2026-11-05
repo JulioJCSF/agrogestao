@@ -1,3 +1,4 @@
 # Massa adicional exclusivamente local. Não altera a location nem checksums do Flyway.
 agrogestao:
   massa-dev: true
+  dev-senha-usuarios: ${DEV_SENHA_USUARIOS:}
