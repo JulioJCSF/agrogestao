@@ -8,7 +8,7 @@ export default [
   { ignores: ['dist', 'node_modules'] },
   js.configs.recommended,
   {
-    files: ['tests/**/*.mjs'],
+    files: ['tests/**/*.mjs', 'scripts/**/*.mjs'],
     languageOptions: { globals: globals.node },
   },
   {

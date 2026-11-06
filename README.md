@@ -254,6 +254,10 @@ Os dados de exemplo da carga inicial (usuários `titular`, `suplente` e `consult
 
 Para zerar somente o banco local de desenvolvimento, pare a API e execute `docker compose down -v` na raiz, depois `docker compose up -d db`. O comando apaga o volume local e todos os registros nele.
 
+#### Popular o banco de dev
+
+Com a API no ar, a partir de `web/`: `npm run popular:dev` (opcional: `npm run popular:dev -- --semente=<n>`; a mesma semente gera a mesma carga). O script cria pela API, com as mesmas regras do uso real, uma carga sintética de 12 produtores com propriedades, plantios, despesas rateadas, diárias, produções, vendas (inclusive acima do produzido), estornos, encerramentos e emissões de relatório, e imprime um resumo no fim. Só aceita `localhost` ou `127.0.0.1` (`AGROGESTAO_API_URL`, padrão `http://localhost:8080`). Entra com `ADMIN_LOGIN` e `ADMIN_SENHA` do `.env` e, com `DEV_SENHA_USUARIOS` preenchida, faz os lançamentos como `operador.dev`. Não roda duas vezes: se a carga já existe, avisa e não cria nada. Para recomeçar é preciso `docker compose down -v`, porque as emissões de relatório são imutáveis.
+
 ### Testes da API
 
 A partir de `api/`:
